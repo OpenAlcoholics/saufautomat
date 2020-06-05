@@ -152,7 +152,6 @@ let addPlayer name model dispatch =
         (AddPlayer
             { Name = name
               Active = true })
-    (ChangeActivePlayer |> dispatch)
     HidePlayerNameDuplicate |> ignore
     true
 
