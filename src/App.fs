@@ -86,8 +86,10 @@ let rec findNextActivePlayer (playerList: Player list) model =
 
 // UPDATE
 
-let getNextCard cards =
-    List.filter (fun c -> c.count > 0) cards
+let getNextCard (cards: RawCard list) =
+    if cards.Length = 0 then None else
+        let card =(List.filter (fun c -> c.count > 0) cards).Item (System.Random().Next() % cards.Length)
+        Some { card with text = (card.text.Replace("{int}", (sprintf "%d" ((System.Random().Next()) % 9 + 2)))) }
 
 let update (msg: Msg) (model: Model) =
     match msg with
@@ -95,7 +97,7 @@ let update (msg: Msg) (model: Model) =
         if model.Cards.Length = 0 then
             model, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
         else
-            { model with CurrentCard = Some(model.Cards.Item((System.Random().Next() % model.Cards.Length))) },  // TODO: Actually decrement count and use it
+            { model with CurrentCard = getNextCard model.Cards },  // TODO: Actually decrement count and use it
             Cmd.ofSub (fun dispatch -> dispatch IncrementCounter)
     | ChangeActivePlayer ->
         { model with CurrentPlayer = findNextActivePlayer (List.filter (fun p -> p.Active) model.Players) model },
@@ -213,8 +215,7 @@ let view (model: Model) dispatch =
                     ClassName "card-body card-title" ]
                     [ str
                         (match model.CurrentCard with
-                         | Some (card) ->
-                             (card.text.Replace("{int}", (sprintf "%d" ((System.Random().Next()) % 9 + 2))))
+                         | Some (card) -> card.text
                          | None -> "Click to start") ] ] ]
 
 // App
