@@ -214,7 +214,7 @@ let view (model: Model) dispatch =
                     [ str
                         (match model.CurrentCard with
                          | Some (card) ->
-                             (card.text.Replace("{int}", (sprintf "%d" ((System.Random().Next()) % 5 + 1))))
+                             (card.text.Replace("{int}", (sprintf "%d" ((System.Random().Next()) % 9 + 2))))
                          | None -> "Click to start") ] ] ]
 
 // App
