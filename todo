@@ -1,0 +1,8 @@
+- random is activated on component update (e.g. user toggle)
+- add counter for cards played
+- fix Schluck/Schluecke (start with 2?)
+- fix add player -> changeactiveplayer
+- show cards for everyone under active card
+- replace {int} with {int:start-end}
+- remove facebook cards
+- card-counter for every person
