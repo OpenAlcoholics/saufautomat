@@ -87,9 +87,25 @@ let rec findNextActivePlayer (playerList: Player list) model =
 // UPDATE
 
 let getNextCard (cards: RawCard list) =
-    if cards.Length = 0 then None else
-        let card =(List.filter (fun c -> c.count > 0) cards).Item (System.Random().Next() % cards.Length)
-        Some { card with text = (card.text.Replace("{int}", (sprintf "%d" ((System.Random().Next()) % 9 + 2)))) }
+    let cards = List.filter (fun card -> card.count > 0) cards
+    if cards.Length = 0 then
+        None
+    else
+        let card = cards.Item(System.Random().Next() % cards.Length)
+        Some
+            { card with
+                  text = (card.text.Replace("{int}", (sprintf "%d" ((System.Random().Next()) % 9 + 2))))
+                  count = card.count - 1 }
+
+let decreaseCardCount card cards =
+    match card with
+    | Some card ->
+        List.map (fun c ->
+            if c.text = card.text then
+                { c with count = c.count - 1 }
+            else
+                c) cards
+    | None -> cards
 
 let update (msg: Msg) (model: Model) =
     match msg with
@@ -97,8 +113,10 @@ let update (msg: Msg) (model: Model) =
         if model.Cards.Length = 0 then
             model, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
         else
-            { model with CurrentCard = getNextCard model.Cards },  // TODO: Actually decrement count and use it
-            Cmd.ofSub (fun dispatch -> dispatch IncrementCounter)
+            let card = getNextCard model.Cards
+            { model with
+                  CurrentCard = card
+                  Cards = decreaseCardCount card model.Cards }, Cmd.ofSub (fun dispatch -> dispatch IncrementCounter) // TODO: Actually decrement count and use it
     | ChangeActivePlayer ->
         { model with CurrentPlayer = findNextActivePlayer (List.filter (fun p -> p.Active) model.Players) model },
         Cmd.Empty
@@ -203,8 +221,9 @@ let view (model: Model) dispatch =
                 ClassName "text-center" ]
               [ str
                   ((match model.CurrentPlayer with
-                   | Some player -> player.Name
-                   | None -> "Kein aktiver Spieler") + (sprintf " | %d" model.Counter) ) ]
+                    | Some player -> player.Name
+                    | None -> "Kein aktiver Spieler")
+                   + (sprintf " | %d" model.Counter)) ]
           div
               [ ClassName "card"
                 Id "card" ]
@@ -212,11 +231,12 @@ let view (model: Model) dispatch =
                   [ OnClick(fun _ ->
                       do ChangeActiveCard |> dispatch
                          ChangeActivePlayer |> dispatch)
-                    ClassName "card-body card-title" ]
+                    ClassName "card-body card-title"
+                    Disabled (model.CurrentCard.IsNone && model.Counter > 0) ]
                     [ str
                         (match model.CurrentCard with
                          | Some (card) -> card.text
-                         | None -> "Click to start") ] ] ]
+                         | None -> if model.Counter = 0 then "Click to start" else "No cards left") ] ] ]
 
 // App
 Program.mkProgram init update view
