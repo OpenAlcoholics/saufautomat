@@ -94,8 +94,7 @@ let getNextCard (cards: RawCard list) =
         let card = cards.Item(System.Random().Next() % cards.Length)
         Some
             { card with
-                  text = (card.text.Replace("{int}", (sprintf "%d" ((System.Random().Next()) % 9 + 2))))
-                  count = card.count - 1 }
+                  text = (card.text.Replace("{int}", (sprintf "%d" ((System.Random().Next()) % 9 + 2)))) }
 
 let decreaseCardCount card cards =
     match card with
