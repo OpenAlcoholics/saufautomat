@@ -92,7 +92,8 @@ let getNextCard (cards: RawCard list) =
         None
     else
         let card = cards.Item(System.Random().Next() % cards.Length)
-        Some { card with text = (card.text.Replace("{int}", (sprintf "%d" ((System.Random().Next()) % 9 + 2)))) }
+        let replacement_text = (Seq.map (fun w -> if w = "{int}" then (sprintf "%d" ((System.Random().Next()) % 9 + 2)) else w) (card.text.Split ' ')) |> String.concat " "
+        Some { card with text = replacement_text }
 
 let decreaseCardCount card cards =
     match card with
