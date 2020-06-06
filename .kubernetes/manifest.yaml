@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: torbencarstens/saufautomat
+        image: torbencarstens/saufautomat{{TAG}}
         imagePullPolicy: Always
         ports:
         - containerPort: 80
