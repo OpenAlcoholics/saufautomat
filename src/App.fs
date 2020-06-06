@@ -19,7 +19,8 @@ open System
 
 type Player =
     { Name: string
-      Active: bool }
+      Active: bool
+      CardsPlayed: int }
 
 type RawCard =
     { text: string
@@ -78,25 +79,27 @@ let getDistinctCardCount cards =
     (List.map (fun c -> c.text) cards |> List.distinct).Length
 
 
-let rec findNextActivePlayer (playerList: Player list) model =
-    if playerList.Length = 0 then
-        None
-    else if playerList.Length = 1 then
-        Some playerList.Head
-    else
-        match model.CurrentPlayer with
-        | Some player ->
-            match List.tryFindIndex (fun p -> playerComp p player) playerList with
-            | Some index ->
-                let player = playerList.Item((index + 1) % playerList.Length)
-                match player.Active with
-                | false -> findNextActivePlayer (List.filter (fun p -> player.Name <> p.Name) playerList) model
-                | true -> Some player
-            | None -> Some model.Players.Head
-        | None -> Some model.Players.Head
-
 let unwrapOr (opt: 'b option) (m: 'b -> 't) (def: 't) =
     if opt.IsSome then m opt.Value else def
+
+
+let rec findNextActivePlayer (playerList: Player list) model =
+    if playerList.Length = 0 then
+            None
+         else if playerList.Length = 1 then
+             Some playerList.Head
+         else
+             match model.CurrentPlayer with
+             | Some player ->
+                 match List.tryFindIndex (fun p -> playerComp p player) playerList with
+                 | Some index ->
+                     let player = playerList.Item((index + 1) % playerList.Length)
+                     match player.Active with
+                     | false -> findNextActivePlayer (List.filter (fun p -> player.Name <> p.Name) playerList) model
+                     | true -> Some player
+                 | None -> Some model.Players.Head
+             | None -> Some model.Players.Head
+
 
 // UPDATE
 
@@ -150,13 +153,15 @@ let update (msg: Msg) (model: Model) =
          then Cmd.ofSub (fun dispatch -> dispatch IncrementCounter)
          else Cmd.Empty)
     | ChangeActivePlayer ->
-        { model with
-              CurrentPlayer =
-                  findNextActivePlayer
-                      (List.filter (fun p ->
-                          p.Active || (match model.CurrentPlayer with
-                                       | Some cp -> cp.Name = p.Name
-                                       | None -> false)) model.Players) model }, Cmd.Empty
+        let nextPlayer =
+            findNextActivePlayer
+                (List.filter (fun p ->
+                    p.Active || (match model.CurrentPlayer with
+                                 | Some cp -> cp.Name = p.Name
+                                 | None -> false)) model.Players) model
+
+        { model with CurrentPlayer = nextPlayer
+                     Players = List.map (fun player -> if player.Name = (unwrapOr nextPlayer (fun p -> p.Name) "") then { player with CardsPlayed = player.CardsPlayed + 1 } else player  ) model.Players }, Cmd.Empty
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
     | AddCards cards ->
@@ -171,8 +176,8 @@ let update (msg: Msg) (model: Model) =
               Players = (List.filter (fun p -> p.Name <> player.Name) model.Players)
               CurrentPlayer =
                   match model.CurrentPlayer with
-                  | Some cplayer ->
-                      if player.Name = cplayer.Name then None else model.CurrentPlayer
+                  | Some currentPlayer ->
+                      if player.Name = currentPlayer.Name then None else model.CurrentPlayer
                   | None -> None }, Cmd.Empty
     | TogglePlayerActivity player ->
         { model with
@@ -189,7 +194,8 @@ let addPlayer name model dispatch =
     dispatch
         (AddPlayer
             { Name = name
-              Active = true })
+              Active = true
+              CardsPlayed = 0 })
     HidePlayerNameDuplicate |> ignore
     true
 
@@ -205,12 +211,12 @@ let displayPlayer player model dispatch =
     div
         [ ClassName
             ("flex-column mr-2 card " + (if model.CurrentPlayer.IsSome && model.CurrentPlayer.Value.Name = player.Name
-                                    then "bg-primary"
-                                    else if not player.Active
-                                    then "border-warning"
-                                    else "")) ]
+                                         then "bg-primary"
+                                         else if not player.Active
+                                         then "border-warning"
+                                         else "")) ]
         [ div [ ClassName "card-body" ]
-              [ h5 [ ClassName "card-title text-center" ] [ str player.Name ]
+              [ h5 [ ClassName "card-title text-center" ] [ str (sprintf "%s (%d)" player.Name player.CardsPlayed) ]
                 div [ ClassName "d-flex justify-content-between" ]
                     [ button
                         [ ClassName "card-text btn btn-secondary toggle-button"
@@ -237,23 +243,24 @@ let addPlayerFunction model dispatch =
         |> ignore
 
 let sidebar (model: Model) dispatch =
-    div
-        [ ClassName "col-md-2 sidebar col h-100" ]
+    div [ ClassName "col-md-2 sidebar col h-100" ]
         [ div [ ClassName "form-group" ]
-                    [ input
-                        [ Name "add-player-field"
-                          ClassName "form-control m-1 w-100"
-                          Id "add-player-field"
-                          OnKeyDown(fun x ->
-                              if x.keyCode = 13. then (addPlayerFunction model dispatch))
-                          MaxLength 20. ]
-                      button
-                        [ ClassName "btn btn-primary m-1 w-100"
-                          OnClick(fun _ -> addPlayerFunction model dispatch) ] [ str "Add player" ] ]
+              [ input
+                  [ Name "add-player-field"
+                    ClassName "form-control m-1 w-100"
+                    Id "add-player-field"
+                    OnKeyDown(fun x ->
+                        if x.keyCode = 13. then (addPlayerFunction model dispatch))
+                    MaxLength 20. ]
+                button
+                    [ ClassName "btn btn-primary m-1 w-100"
+                      OnClick(fun _ -> addPlayerFunction model dispatch) ] [ str "Add player" ] ]
           hr []
-          div [ ClassName "flex-row mb-4"
-                Style [ OverflowY "scroll"
-                        Height "85%" ] ] (List.map (fun p -> displayPlayer p model dispatch) model.Players) ]
+          div
+              [ ClassName "flex-row mb-4"
+                Style
+                    [ OverflowY "scroll"
+                      Height "85%" ] ] (List.map (fun p -> displayPlayer p model dispatch) model.Players) ]
 
 let displayCurrentCard model dispatch =
     div
@@ -305,15 +312,18 @@ let displayInformationHeader model dispatch =
                     AriaValueMax(sprintf "%d" model.Cards.Length) ] [] ] ]
 
 let displayActiveCard (card: RawCard) model dispatch =
-    div [ ClassName "card p-2 m-1"
+    div
+        [ ClassName "card p-2 m-1"
           Title card.text ] [ h5 [ ClassName "card-title h-100" ] [ str card.text ] ]
 
 let activeCards (model: Model) dispatch =
     div
         [ ClassName "active-cards row mr-4 mt-3"
-          Style [ Height "22%"
-                  OverflowY "scroll" ] ]
-        [ div [ ClassName "col d-flex flex-wrap" ] (List.map (fun card -> displayActiveCard card model dispatch) model.ActiveCards) ]
+          Style
+              [ Height "22%"
+                OverflowY "scroll" ] ]
+        [ div [ ClassName "col d-flex flex-wrap" ]
+              (List.map (fun card -> displayActiveCard card model dispatch) model.ActiveCards) ]
 
 let view (model: Model) dispatch =
     div
