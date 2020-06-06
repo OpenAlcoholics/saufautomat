@@ -227,7 +227,7 @@ let view (model: Model) dispatch =
                   ((match model.CurrentPlayer with
                     | Some player -> player.Name
                     | None -> "No active player")
-                   + (sprintf " | %d" model.Counter)) ]
+                   + (sprintf " | %d" model.Counter) + (sprintf " / %d" model.Cards.Length)) ]
           div
               [ ClassName "card"
                 Id "card" ]
