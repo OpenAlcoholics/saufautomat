@@ -15,7 +15,6 @@ WORKDIR /var/app
 
 EXPOSE 8080
 
-ADD .fable .fable
 ADD public public
 ADD src src
 ADD Nuget.Config .
