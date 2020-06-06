@@ -70,6 +70,11 @@ let init (): Model * Cmd<Msg> =
 let playerComp p1 p2 =
     p1.Name = p2.Name
 
+
+let getDistinctCardCount cards =
+    (List.map (fun c -> c.text) cards |> List.distinct).Length
+
+
 let rec findNextActivePlayer (playerList: Player list) model =
     if playerList.Length = 0 then
         None
@@ -87,15 +92,38 @@ let rec findNextActivePlayer (playerList: Player list) model =
             | None -> Some model.Players.Head
         | None -> Some model.Players.Head
 
+let unwrapOr (opt: 'b option) (m: 'b -> 't) (def: 't) =
+    if opt.IsSome then
+        m opt.Value
+    else
+        def
+
 // UPDATE
 
-let getNextCard (cards: RawCard list) =
-    let cards = List.filter (fun card -> card.count > 0) cards
+let getNextCard model =
+    let cards =
+        List.filter (fun card ->
+            card.count > 0
+            && if model.Players.Length = 0 then
+                not card.personal
+               else
+                   true && if (getDistinctCardCount model.Cards) > 1 then card.text <> (unwrapOr
+                                                                                            model.CurrentCard
+                                                                                            (fun c -> c.text)
+                                                                                            "") else true)
+            model.Cards
+
     if cards.Length = 0 then
         None
     else
         let card = cards.Item(System.Random().Next() % cards.Length)
-        let replacement_text = (Seq.map (fun w -> if w = "{int}" then (sprintf "%d" ((System.Random().Next()) % 9 + 2)) else w) (card.text.Split ' ')) |> String.concat " "
+
+        let replacement_text =
+            (Seq.map (fun w ->
+                if w = "{int}"
+                then (sprintf "%d" ((System.Random().Next()) % 9 + 2))
+                else w) (card.text.Split ' '))
+            |> String.concat " "
         Some { card with text = replacement_text }
 
 let decreaseCardCount card cards =
@@ -104,10 +132,6 @@ let decreaseCardCount card cards =
         List.map (fun c ->
             if c.text = card.text then { c with count = c.count - 1 } else c) cards
     | None -> cards
-
-let getDistinctCardCount cards =
-    (List.map (fun c -> c.text) cards
-    |> List.distinct).Length
 
 let explodeCards cards =
     (List.map (fun card -> ([ card ] |> Seq.collect (fun c -> List.replicate c.count { c with count = 1 }))) cards)
@@ -119,15 +143,21 @@ let update (msg: Msg) (model: Model) =
     | InitialLoad ->
         { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
     | ChangeActiveCard ->
-        let card = getNextCard model.Cards
+        let card = getNextCard model
         { model with
               CurrentCard = card
-              Cards = decreaseCardCount card model.Cards }, if card.IsSome then Cmd.ofSub (fun dispatch -> dispatch IncrementCounter) else Cmd.Empty
+              Cards = decreaseCardCount card model.Cards },
+        (if card.IsSome
+         then Cmd.ofSub (fun dispatch -> dispatch IncrementCounter)
+         else Cmd.Empty)
     | ChangeActivePlayer ->
-        { model with CurrentPlayer = findNextActivePlayer (List.filter (fun p -> p.Active || (match model.CurrentPlayer with
-                                                                                                | Some cp -> cp.Name = p.Name
-                                                                                                | None -> false )) model.Players) model },
-        Cmd.Empty
+        { model with
+              CurrentPlayer =
+                  findNextActivePlayer
+                      (List.filter (fun p ->
+                          p.Active || (match model.CurrentPlayer with
+                                       | Some cp -> cp.Name = p.Name
+                                       | None -> false)) model.Players) model }, Cmd.Empty
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
     | AddCards cards ->
@@ -220,21 +250,26 @@ let sidebar (model: Model) dispatch =
           div [ ClassName "card" ] (List.map (fun p -> displayPlayer p model dispatch) model.Players) ]
 
 let view (model: Model) dispatch =
-    div [ Ref (fun element -> if not (isNull element) then if model.InitialLoad then dispatch InitialLoad) ]
+    div
+        [ Ref(fun element ->
+            if not (isNull element) then
+                if model.InitialLoad then dispatch InitialLoad) ]
         [ (sidebar model dispatch)
           p
               [ Id "active-player-header"
                 ClassName "text-center" ]
-              [ span [ ] [ str
-                  (match model.CurrentPlayer with
-                    | Some player -> player.Name
-                    | None -> "No active player") ]
-                span [ ] [ str " | " ]
+              [ span []
+                    [ str
+                        (match model.CurrentPlayer with
+                         | Some player -> player.Name
+                         | None -> "No active player") ]
+                span [] [ str " | " ]
                 span [ Title "Number of cards played so far" ] [ str (sprintf "%d" model.Counter) ]
-                span [ ] [ str " / " ]
+                span [] [ str " / " ]
                 span [ Title "Total number of cards" ] [ str (sprintf "%d " model.Cards.Length) ]
-                span [ ] [ str " " ]
-                span [ Title "Distinct number of cards" ] [ str (sprintf "(%d)" (getDistinctCardCount model.Cards)) ]]
+                span [] [ str " " ]
+                span [ Title "Distinct number of cards" ]
+                    [ str (sprintf "(%d)" (getDistinctCardCount model.Cards)) ] ]
           div
               [ ClassName "card"
                 Id "card" ]
