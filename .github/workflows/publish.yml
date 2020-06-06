@@ -23,6 +23,6 @@ jobs:
         with:
           args: kubernetes cluster kubeconfig show torbencarstens > $GITHUB_WORKSPACE/.kubeconfig
       - name: update tag in manifest.yml
-        run: sed -i -e "s#{{TAG}}#:$(echo ${GITHUB_SHA})#g" .kubernetes/manifest.yaml
+        run: sed -i -e "s#{{TAG}}#:$(echo ${{steps.vars.outputs.tag}})#g" .kubernetes/manifest.yaml
       - name: apply config
         run: kubectl -n drinkdome --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig apply -f .kubernetes/manifest.yaml
