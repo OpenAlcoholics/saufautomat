@@ -105,7 +105,9 @@ let decreaseCardCount card cards =
             if c.text = card.text then { c with count = c.count - 1 } else c) cards
     | None -> cards
 
-
+let getDistinctCardCount cards =
+    (List.map (fun c -> c.text) cards
+    |> List.distinct).Length
 
 let explodeCards cards =
     (List.map (fun card -> ([ card ] |> Seq.collect (fun c -> List.replicate c.count { c with count = 1 }))) cards)
@@ -223,11 +225,16 @@ let view (model: Model) dispatch =
           p
               [ Id "active-player-header"
                 ClassName "text-center" ]
-              [ str
-                  ((match model.CurrentPlayer with
+              [ span [ ] [ str
+                  (match model.CurrentPlayer with
                     | Some player -> player.Name
-                    | None -> "No active player")
-                   + (sprintf " | %d" model.Counter) + (sprintf " / %d" model.Cards.Length)) ]
+                    | None -> "No active player") ]
+                span [ ] [ str " | " ]
+                span [ Title "Number of cards played so far" ] [ str (sprintf "%d" model.Counter) ]
+                span [ ] [ str " / " ]
+                span [ Title "Total number of cards" ] [ str (sprintf "%d " model.Cards.Length) ]
+                span [ ] [ str " " ]
+                span [ Title "Distinct number of cards" ] [ str (sprintf "(%d)" (getDistinctCardCount model.Cards)) ]]
           div
               [ ClassName "card"
                 Id "card" ]
