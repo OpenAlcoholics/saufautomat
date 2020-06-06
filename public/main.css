@@ -1,5 +1,5 @@
 .sidebar {
-    position: fixed;
+    position: absolute;
     top: 0;
     bottom: 0;
     right: 0;
@@ -36,8 +36,12 @@
     height: 80%;
     width: 80%;
     font-size: 4em;
+    top: 5%;
 }
 
 #active-player-header {
+    position: fixed;
+    top: 10px;
+    right: 50%;
     font-size: 2em;
 }
