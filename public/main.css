@@ -1,47 +1,11 @@
-.sidebar {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    z-index: 100;
-    width: 20%;
-    height: 100%;
-    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+body {
+    overflow: hidden;
 }
 
-#add-player {
-    margin-left: 5px;
+.delete-button:hover {
+    background-color: #E74C3C !important;
 }
 
-#player-current {
-    background: blue;
-    color: white;
-}
-
-.player-active {
-    background: green;
-}
-
-.player-inactive {
-    background: yellow;
-}
-
-.break {
-    flex-basis: 100%;
-    height: 0;
-}
-
-#card {
-    position: fixed;
-    height: 80%;
-    width: 80%;
-    font-size: 4em;
-    top: 5%;
-}
-
-#active-player-header {
-    position: fixed;
-    top: 10px;
-    right: 50%;
-    font-size: 2em;
+.toggle-button:hover {
+    background-color: #F39C12 !important;
 }
