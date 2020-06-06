@@ -120,7 +120,9 @@ let update (msg: Msg) (model: Model) =
                   CurrentCard = card
                   Cards = decreaseCardCount card model.Cards }, Cmd.ofSub (fun dispatch -> dispatch IncrementCounter)
     | ChangeActivePlayer ->
-        { model with CurrentPlayer = findNextActivePlayer (List.filter (fun p -> p.Active) model.Players) model },
+        { model with CurrentPlayer = findNextActivePlayer (List.filter (fun p -> p.Active || (match model.CurrentPlayer with
+                                                                                                | Some cp -> cp.Name = p.Name
+                                                                                                | None -> false )) model.Players) model },
         Cmd.Empty
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
