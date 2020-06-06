@@ -36,9 +36,11 @@ type Model =
       Cards: RawCard list
       CurrentPlayer: Player option
       Counter: int
-      DisplayPlayerNameDuplicateError: bool }
+      DisplayPlayerNameDuplicateError: bool
+      InitialLoad: bool }
 
 type Msg =
+    | InitialLoad
     | ChangeActiveCard
     | ChangeActivePlayer
     | IncrementCounter
@@ -59,10 +61,11 @@ let getCards dispatch =
 let init (): Model * Cmd<Msg> =
     { Players = List.empty
       CurrentCard = None
-      Cards = getCards |> unbox
+      Cards = List.empty
       CurrentPlayer = None
       Counter = 0
-      DisplayPlayerNameDuplicateError = false }, Cmd.Empty
+      DisplayPlayerNameDuplicateError = false
+      InitialLoad = true }, Cmd.Empty
 
 let playerComp p1 p2 =
     p1.Name = p2.Name
@@ -111,14 +114,13 @@ let explodeCards cards =
 
 let update (msg: Msg) (model: Model) =
     match msg with
+    | InitialLoad ->
+        { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
     | ChangeActiveCard ->
-        if model.Cards.Length = 0 then
-            model, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
-        else
-            let card = getNextCard model.Cards
-            { model with
-                  CurrentCard = card
-                  Cards = decreaseCardCount card model.Cards }, Cmd.ofSub (fun dispatch -> dispatch IncrementCounter)
+        let card = getNextCard model.Cards
+        { model with
+              CurrentCard = card
+              Cards = decreaseCardCount card model.Cards }, if card.IsSome then Cmd.ofSub (fun dispatch -> dispatch IncrementCounter) else Cmd.Empty
     | ChangeActivePlayer ->
         { model with CurrentPlayer = findNextActivePlayer (List.filter (fun p -> p.Active || (match model.CurrentPlayer with
                                                                                                 | Some cp -> cp.Name = p.Name
@@ -127,7 +129,7 @@ let update (msg: Msg) (model: Model) =
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
     | AddCards cards ->
-        { model with Cards = (explodeCards cards) }, Cmd.ofSub (fun dispatch -> dispatch ChangeActiveCard)
+        { model with Cards = (explodeCards cards) }, Cmd.Empty
     | AddPlayer player ->
         { model with Players = player :: model.Players },
         match model.CurrentPlayer with
@@ -159,7 +161,6 @@ let addPlayer name model dispatch =
     HidePlayerNameDuplicate |> ignore
     true
 
-// TODO: check that there are no duplicate names
 let tryAddPlayer name model dispatch =
     match List.tryFind (fun p -> p.Name = name) model.Players with
     | Some _ -> false
@@ -217,7 +218,7 @@ let sidebar (model: Model) dispatch =
           div [ ClassName "card" ] (List.map (fun p -> displayPlayer p model dispatch) model.Players) ]
 
 let view (model: Model) dispatch =
-    div []
+    div [ Ref (fun element -> if not (isNull element) then if model.InitialLoad then dispatch InitialLoad) ]
         [ (sidebar model dispatch)
           p
               [ Id "active-player-header"
