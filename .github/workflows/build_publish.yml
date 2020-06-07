@@ -34,6 +34,8 @@ jobs:
       - uses: actions/download-artifact@v1
         with:
           name: bundlejs
+      - name: Move artifact into public
+        run: mv bundlejs/bundle.js public/bundle.js
       - name: Build the tagged Docker image
         run: docker build -t openalcoholics/saufautomat:${{steps.vars.outputs.tag}} .
       - name: Push the tagged Docker image
