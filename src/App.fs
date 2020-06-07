@@ -33,6 +33,10 @@ type Settings =
     { MinimumSips: int
       MaximumSips: int }
 
+type RoundInformation = {
+    CardsToPlay: int
+}
+
 type Model =
     { Players: Player.Type list
       ActiveCards: RawCard list
@@ -42,7 +46,9 @@ type Model =
       Counter: int
       DisplayPlayerNameDuplicateError: bool
       InitialLoad: bool
-      Settings: Settings }
+      Settings: Settings
+      Round: int
+      RoundInformation : RoundInformation }
 
 type Msg =
     | InitialLoad
@@ -60,6 +66,7 @@ type Msg =
     | DecrementPlayerUseCards
     | SaveSettings
     | Reset
+    | IncrementRound
 
 let getCards dispatch =
     promise {
@@ -103,7 +110,11 @@ let init (): Model * Cmd<Msg> =
       InitialLoad = true
       Settings =
           { MinimumSips = 2
-            MaximumSips = 10 } }, Cmd.Empty
+            MaximumSips = 10 }
+      Round = 0
+      RoundInformation = {
+          CardsToPlay = 0
+      }}, Cmd.Empty
 
 let getDistinctCardCount cards =
     (List.map (fun c -> c.id) cards |> List.distinct).Length
@@ -140,7 +151,7 @@ let filterCardsForTurn model =
             card.count > 0 && if model.Players.Length = 0 then
                                   not card.personal
                               else
-                                  true && if distinctCount > 1
+                                  true && if distinctCount > 1 // TODO: this should be checked after everything else
                                           then card.id <> (unwrapOrMap model.CurrentCard (fun c -> c.id) -1)
                                           else true) model.Cards
 
@@ -180,6 +191,17 @@ let explodeCards cards =
     |> Seq.reduce Seq.append
     |> List.ofSeq
 
+let roundHasEnded model =
+    model.RoundInformation.CardsToPlay = 0
+
+let getPlayerIndex player players =
+    match player with
+    | Some p -> List.tryFindIndex p players
+    | None -> None
+
+let getActivePlayers model =
+    List.filter (fun player -> player.Active) model.Players
+
 let update (msg: Msg) (model: Model) =
     match msg with
     | InitialLoad ->
@@ -190,7 +212,8 @@ let update (msg: Msg) (model: Model) =
         play ()
         { model with
               CurrentCard = card
-              Cards = decreaseCardCount card model.Cards },
+              Cards = decreaseCardCount card model.Cards
+              RoundInformation = { CardsToPlay = model.RoundInformation.CardsToPlay - 1 } },
         (if card.IsSome then
             Cmd.ofSub (fun dispatch ->
                 do dispatch IncrementCounter
@@ -210,19 +233,21 @@ let update (msg: Msg) (model: Model) =
                   List.map (fun player ->
                       if (Player.compareOption (Some player) nextPlayer)
                       then { player with CardsPlayed = player.CardsPlayed + 1 }
-                      else player) model.Players }, Cmd.Empty
+                      else player) model.Players }, if (roundHasEnded model) then Cmd.ofSub(fun dispatch -> dispatch IncrementRound) else Cmd.Empty
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
     | AddCards cards ->
         { model with Cards = (explodeCards cards) }, Cmd.Empty
     | AddPlayer player ->
-        { model with Players = player :: model.Players },
+        { model with Players = model.Players @ [ player ]
+                     RoundInformation = { CardsToPlay = model.RoundInformation.CardsToPlay + 1 (*TODO: should this only be executed when the added player has a turn in this round?*) } },
         match model.CurrentPlayer with
         | Some _ -> Cmd.Empty
         | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
     | RemovePlayer player ->
         { model with
               Players = (List.filter (fun p -> p <> player) model.Players)
+              RoundInformation = { CardsToPlay = model.RoundInformation.CardsToPlay - 1 }
               CurrentPlayer =
                   match model.CurrentPlayer with
                   | Some currentPlayer ->
@@ -259,6 +284,8 @@ let update (msg: Msg) (model: Model) =
                         MinimumSips = min
                         MaximumSips = max } }, Cmd.Empty // TODO
     | Reset -> init ()
+    | IncrementRound -> { model with Round = model.Round + 1
+                                     RoundInformation = { CardsToPlay = (getActivePlayers model).Length } }, Cmd.Empty
 
 // VIEW (rendered with React)
 
@@ -400,6 +427,7 @@ let displayInformationHeader model dispatch =
           span [ Title "Total number of cards" ] [ str (sprintf "%d " model.Cards.Length) ]
           span [] [ str " " ]
           span [ Title "Distinct number of cards" ] [ str (sprintf "(%d)" (getDistinctCardCount model.Cards)) ]
+          span [ ] [ str (sprintf " | Runde %d" model.Round) ]
           div [ ClassName "progress" ]
               [ div
                   [ ClassName "progress-bar"
