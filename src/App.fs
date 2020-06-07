@@ -68,8 +68,18 @@ let getCards dispatch =
         AddCards res |> dispatch
     }
 
-[<Emit("(new Audio($0)).play();")>]
-let play (fileName: string) = jsNative
+//[<Emit("(new Audio($0)).play();")>]
+//let play (fileName: string) = jsNative
+let play () =
+    ((Browser.Dom.window.document.getElementById "nextcard-audio") :?> Browser.Types.HTMLMediaElement).play()
+
+[<Emit("$0.currentTime = $2")>]
+let assignCurrentTime element value = jsNative
+
+let stop () =
+    ((Browser.Dom.window.document.getElementById "nextcard-audio") :?> Browser.Types.HTMLMediaElement).pause()
+    assignCurrentTime ((Browser.Dom.window.document.getElementById "nextcard-audio") :?> Browser.Types.HTMLMediaElement) "0.0"
+
 
 type HtmlAttr =
     | [<CompiledName("aria-valuenow")>] AriaValueNow of string
@@ -166,7 +176,8 @@ let update (msg: Msg) (model: Model) =
         { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
     | ChangeActiveCard ->
         let card = getNextCard model
-        play "/nextcard.mp3"
+        stop ()
+        play ()
         { model with
               CurrentCard = card
               Cards = decreaseCardCount card model.Cards },
@@ -343,8 +354,8 @@ let displayCurrentCard model dispatch =
         [ div [ ClassName "card-body flex-wrap" ]
               [ button
                   [ OnClick(fun _ ->
-                      do ChangeActiveCard |> dispatch
-                         ChangeActivePlayer |> dispatch)
+                      ChangeActiveCard |> dispatch
+                      ChangeActivePlayer |> dispatch)
                     ClassName "card-body card-title btn btn-dark w-100 h-100"
                     Id "current-card-body"
                     Disabled(model.CurrentCard.IsNone && model.Counter > 0) ]
@@ -401,6 +412,8 @@ let view (model: Model) dispatch =
                 if model.InitialLoad then dispatch InitialLoad)
           ClassName "container-fluid h-100" ]
         [ div [ ClassName "row m-4" ] [
+            figure [] [ audio [ Id "nextcard-audio"
+                                Src "/nextcard.mp3" ] [  ] ]
             div [ ClassName "col-1" ] [
                 button [ ClassName "btn btn-primary"
                          DataToggle "modal"
