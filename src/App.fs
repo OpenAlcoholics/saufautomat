@@ -29,10 +29,9 @@ type RawCard =
       remote: bool
       unique: bool }
 
-type Settings = {
-    MinimumSips: int
-    MaximumSips: int
-}
+type Settings =
+    { MinimumSips: int
+      MaximumSips: int }
 
 type Model =
     { Players: Player.Type list
@@ -79,7 +78,8 @@ let assignCurrentTime element value = jsNative
 
 let stop () =
     ((Browser.Dom.window.document.getElementById "nextcard-audio") :?> Browser.Types.HTMLMediaElement).pause()
-    assignCurrentTime ((Browser.Dom.window.document.getElementById "nextcard-audio") :?> Browser.Types.HTMLMediaElement) "0.0"
+    assignCurrentTime
+        ((Browser.Dom.window.document.getElementById "nextcard-audio") :?> Browser.Types.HTMLMediaElement) "0.0"
 
 
 type HtmlAttr =
@@ -92,7 +92,7 @@ type HtmlAttr =
     | [<CompiledName("for")>] For of string
     interface IHTMLProp
 
-let init () : Model * Cmd<Msg> =
+let init (): Model * Cmd<Msg> =
     { Players = List.empty
       ActiveCards = List.empty
       CurrentCard = None
@@ -101,8 +101,9 @@ let init () : Model * Cmd<Msg> =
       Counter = 0
       DisplayPlayerNameDuplicateError = false
       InitialLoad = true
-      Settings = { MinimumSips = 2
-                   MaximumSips = 10} }, Cmd.Empty
+      Settings =
+          { MinimumSips = 2
+            MaximumSips = 10 } }, Cmd.Empty
 
 let getDistinctCardCount cards =
     (List.map (fun c -> c.id) cards |> List.distinct).Length
@@ -131,7 +132,7 @@ let rec findNextActivePlayer (playerList: Player.Type list) model =
 
 let int_replacement_regex = new Regex("{int(:?:(\d+)-(\d+))?}")
 
-let getNextCard model =
+let filterCardsForTurn model =
     let distinctCount = (getDistinctCardCount model.Cards)
 
     let cards =
@@ -142,6 +143,14 @@ let getNextCard model =
                                   true && if distinctCount > 1
                                           then card.id <> (unwrapOrMap model.CurrentCard (fun c -> c.id) -1)
                                           else true) model.Cards
+
+    List.filter
+        (fun card ->
+            (List.filter (fun activeCard -> not (activeCard.id = card.id && card.unique)) model.ActiveCards).Length = 0)
+        cards
+
+let getNextCard model =
+    let cards = filterCardsForTurn model
     if cards.Length = 0 then
         None
     else
@@ -234,14 +243,21 @@ let update (msg: Msg) (model: Model) =
                        (List.map (fun card -> { card with rounds = card.rounds - 1 }) model.ActiveCards)) }, Cmd.Empty
     | DecrementPlayerUseCards -> model, Cmd.Empty // TODO
     | SaveSettings ->
-        let min = (match ((Browser.Dom.window.document.getElementById "minimum-sips") :?> Browser.Types.HTMLInputElement).value with
-                    | "" -> model.Settings.MinimumSips
-                    | value -> value |> int)
-        let max = (match ((Browser.Dom.window.document.getElementById "maximum-sips") :?> Browser.Types.HTMLInputElement).value with
-                    | "" -> model.Settings.MaximumSips
-                    | value -> value |> int)
-        { model with Settings = { model.Settings with MinimumSips = min
-                                                      MaximumSips = max } }, Cmd.Empty // TODO
+        let min =
+            (match ((Browser.Dom.window.document.getElementById "minimum-sips") :?> Browser.Types.HTMLInputElement).value with
+             | "" -> model.Settings.MinimumSips
+             | value -> value |> int)
+
+        let max =
+            (match ((Browser.Dom.window.document.getElementById "maximum-sips") :?> Browser.Types.HTMLInputElement).value with
+             | "" -> model.Settings.MaximumSips
+             | value -> value |> int)
+
+        { model with
+              Settings =
+                  { model.Settings with
+                        MinimumSips = min
+                        MaximumSips = max } }, Cmd.Empty // TODO
     | Reset -> init ()
 
 // VIEW (rendered with React)
@@ -266,7 +282,7 @@ let settings model dispatch =
                                             [ Name "minimum-sips"
                                               ClassName "m-1 w-100 col"
                                               Id "minimum-sips"
-                                              Placeholder (sprintf "%d" (model.Settings.MinimumSips))
+                                              Placeholder(sprintf "%d" (model.Settings.MinimumSips))
                                               MaxLength 2. ] ]
                                   div [ ClassName "row" ]
                                       [ label
@@ -276,12 +292,13 @@ let settings model dispatch =
                                             [ Name "maximum-sips"
                                               ClassName "m-1 w-100 col"
                                               Id "maximum-sips"
-                                              Placeholder (sprintf "%d" (model.Settings.MaximumSips))
+                                              Placeholder(sprintf "%d" (model.Settings.MaximumSips))
                                               MaxLength 2. ] ] ] ]
-                      div [ ClassName "modal-footer" ] [
-                        button [ ClassName "btn btn-primary"
-                                 DataDismiss "modal"
-                                 OnClick (fun _ -> dispatch SaveSettings)] [ str "Save" ] ] ] ] ]
+                      div [ ClassName "modal-footer" ]
+                          [ button
+                              [ ClassName "btn btn-primary"
+                                DataDismiss "modal"
+                                OnClick(fun _ -> dispatch SaveSettings) ] [ str "Save" ] ] ] ] ]
 
 let addPlayer name model dispatch =
     dispatch (AddPlayer(Player.create name))
@@ -412,17 +429,21 @@ let view (model: Model) dispatch =
             if not (isNull element) then
                 if model.InitialLoad then dispatch InitialLoad)
           ClassName "container-fluid h-100" ]
-        [ div [ ClassName "row m-4" ] [
-            figure [] [ audio [ Id "nextcard-audio"
-                                Src "/nextcard.mp3" ] [  ] ]
-            div [ ClassName "col-1" ] [
-                button [ ClassName "btn btn-primary m-1"
-                         DataToggle "modal"
-                         DataTarget "#settings" ] [ str "Settings" ]
-                button [ ClassName "btn btn-primary ml-1"
-                         OnClick (fun _ -> dispatch Reset) ] [ str "Reset" ] ]
-            (displayInformationHeader model dispatch)
-            span [ ClassName "text-secondary" ] [ str "Contact: saufautomat@carstens.tech" ] ]
+        [ div [ ClassName "row m-4" ]
+              [ figure []
+                    [ audio
+                        [ Id "nextcard-audio"
+                          Src "/nextcard.mp3" ] [] ]
+                div [ ClassName "col-1" ]
+                    [ button
+                        [ ClassName "btn btn-primary m-1"
+                          DataToggle "modal"
+                          DataTarget "#settings" ] [ str "Settings" ]
+                      button
+                          [ ClassName "btn btn-primary ml-1"
+                            OnClick(fun _ -> dispatch Reset) ] [ str "Reset" ] ]
+                (displayInformationHeader model dispatch)
+                span [ ClassName "text-secondary" ] [ str "Contact: saufautomat@carstens.tech" ] ]
           div
               [ ClassName "row m-2"
                 Style [ Height "65%" ] ]
