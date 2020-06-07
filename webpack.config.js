@@ -35,7 +35,7 @@ module.exports = {
     },
     plugins: [
         new HtmlWebpackPlugin({template: "public/index.html"}),
-        new MiniCssExtractPlugin({filename: "public/bootstrap.css"}),
+        new MiniCssExtractPlugin({filename: "bootstrap.css"}),
         new FixStyleOnlyEntriesPlugin(),
         new OptimizeCSSAssetsPlugin({})
     ]
