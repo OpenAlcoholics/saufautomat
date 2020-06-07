@@ -415,10 +415,10 @@ let view (model: Model) dispatch =
             figure [] [ audio [ Id "nextcard-audio"
                                 Src "/nextcard.mp3" ] [  ] ]
             div [ ClassName "col-1" ] [
-                button [ ClassName "btn btn-primary"
+                button [ ClassName "btn btn-primary m-1"
                          DataToggle "modal"
                          DataTarget "#settings" ] [ str "Settings" ]
-                button [ ClassName "btn btn-primary"
+                button [ ClassName "btn btn-primary ml-1"
                          OnClick (fun _ -> dispatch Reset) ] [ str "Reset" ] ]
             (displayInformationHeader model dispatch) ]
           div
