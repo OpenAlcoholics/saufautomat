@@ -295,7 +295,8 @@ let settings model dispatch =
                                               Placeholder(sprintf "%d" (model.Settings.MaximumSips))
                                               MaxLength 2. ] ] ] ]
                       div [ ClassName "modal-footer" ]
-                          [ button
+                          [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
+                            button
                               [ ClassName "btn btn-primary"
                                 DataDismiss "modal"
                                 OnClick(fun _ -> dispatch SaveSettings) ] [ str "Save" ] ] ] ] ]
