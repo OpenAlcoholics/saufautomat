@@ -20,7 +20,8 @@ open System.Text.RegularExpressions
 // MODEL
 
 type RawCard =
-    { text: string
+    { id: int
+      text: string
       count: int
       uses: int
       rounds: int
@@ -104,7 +105,7 @@ let init () : Model * Cmd<Msg> =
                    MaximumSips = 10} }, Cmd.Empty
 
 let getDistinctCardCount cards =
-    (List.map (fun c -> c.text) cards |> List.distinct).Length
+    (List.map (fun c -> c.id) cards |> List.distinct).Length
 
 let unwrapOrMap (opt: 'b option) (m: 'b -> 't) (def: 't) =
     if opt.IsSome then m opt.Value else def
@@ -139,7 +140,7 @@ let getNextCard model =
                                   not card.personal
                               else
                                   true && if distinctCount > 1
-                                          then card.text <> (unwrapOrMap model.CurrentCard (fun c -> c.text) "")
+                                          then card.id <> (unwrapOrMap model.CurrentCard (fun c -> c.id) -1)
                                           else true) model.Cards
     if cards.Length = 0 then
         None
@@ -153,7 +154,7 @@ let getNextCard model =
             (Seq.map (fun w ->
                 let m = int_replacement_regex.Match w
                 match m.Success with
-                | true -> (sprintf "%d" ((System.Random().Next()) % (min - max) + min))
+                | true -> (sprintf "%d" ((System.Random().Next()) % (max - min + 1) + min))
                 | false -> w) (card.text.Split ' '))
             |> String.concat " "
         Some { card with text = replacement_text }
@@ -162,7 +163,7 @@ let decreaseCardCount card cards =
     match card with
     | Some card ->
         List.map (fun c ->
-            if c.text = card.text then { c with count = c.count - 1 } else c) cards
+            if c.id = card.id then { c with count = c.count - 1 } else c) cards
     | None -> cards
 
 let explodeCards cards =
