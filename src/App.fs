@@ -59,6 +59,7 @@ type Msg =
     | DecrementActiveRoundCards
     | DecrementPlayerUseCards
     | SaveSettings
+    | Reset
 
 let getCards dispatch =
     promise {
@@ -80,7 +81,7 @@ type HtmlAttr =
     | [<CompiledName("for")>] For of string
     interface IHTMLProp
 
-let init (): Model * Cmd<Msg> =
+let init () : Model * Cmd<Msg> =
     { Players = List.empty
       ActiveCards = List.empty
       CurrentCard = None
@@ -94,7 +95,6 @@ let init (): Model * Cmd<Msg> =
 
 let getDistinctCardCount cards =
     (List.map (fun c -> c.text) cards |> List.distinct).Length
-
 
 let unwrapOrMap (opt: 'b option) (m: 'b -> 't) (def: 't) =
     if opt.IsSome then m opt.Value else def
@@ -116,9 +116,7 @@ let rec findNextActivePlayer (playerList: Player.Type list) model =
             | None -> Some model.Players.Head
         | None -> Some model.Players.Head
 
-
 // UPDATE
-
 
 let int_replacement_regex = new Regex("{int(:?:(\d+)-(\d+))?}")
 
@@ -232,6 +230,7 @@ let update (msg: Msg) (model: Model) =
                     | value -> value |> int)
         { model with Settings = { model.Settings with MinimumSips = min
                                                       MaximumSips = max } }, Cmd.Empty // TODO
+    | Reset -> init ()
 
 // VIEW (rendered with React)
 
@@ -405,7 +404,9 @@ let view (model: Model) dispatch =
             div [ ClassName "col-1" ] [
                 button [ ClassName "btn btn-primary"
                          DataToggle "modal"
-                         DataTarget "#settings" ] [ str "Settings" ] ]
+                         DataTarget "#settings" ] [ str "Settings" ]
+                button [ ClassName "btn btn-primary"
+                         OnClick (fun _ -> dispatch Reset) ] [ str "Reset" ] ]
             (displayInformationHeader model dispatch) ]
           div
               [ ClassName "row m-2"
