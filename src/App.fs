@@ -421,7 +421,8 @@ let view (model: Model) dispatch =
                          DataTarget "#settings" ] [ str "Settings" ]
                 button [ ClassName "btn btn-primary ml-1"
                          OnClick (fun _ -> dispatch Reset) ] [ str "Reset" ] ]
-            (displayInformationHeader model dispatch) ]
+            (displayInformationHeader model dispatch)
+            span [ ClassName "text-secondary" ] [ str "Contact: saufautomat@carstens.tech" ] ]
           div
               [ ClassName "row m-2"
                 Style [ Height "65%" ] ]
