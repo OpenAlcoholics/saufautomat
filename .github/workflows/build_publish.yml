@@ -39,7 +39,7 @@ jobs:
       - name: Push the tagged Docker image
         run: docker push openalcoholics/saufautomat:${{steps.vars.outputs.tag}}
   deploy:
-    name: "Build dockerfile and deploy"
+    name: "Publish to k8s"
     runs-on: ubuntu-latest
     needs: build_push_docker
     steps:
