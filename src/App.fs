@@ -67,6 +67,8 @@ let getCards dispatch =
         AddCards res |> dispatch
     }
 
+[<Emit("(new Audio($0)).play();")>]
+let play (fileName: string) = jsNative
 
 type HtmlAttr =
     | [<CompiledName("aria-valuenow")>] AriaValueNow of string
@@ -96,7 +98,6 @@ let getDistinctCardCount cards =
 
 let unwrapOrMap (opt: 'b option) (m: 'b -> 't) (def: 't) =
     if opt.IsSome then m opt.Value else def
-
 
 let rec findNextActivePlayer (playerList: Player.Type list) model =
     if playerList.Length = 0 then
@@ -167,7 +168,7 @@ let update (msg: Msg) (model: Model) =
         { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
     | ChangeActiveCard ->
         let card = getNextCard model
-
+        play "/nextcard.mp3"
         { model with
               CurrentCard = card
               Cards = decreaseCardCount card model.Cards },
