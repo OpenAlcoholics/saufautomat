@@ -15,6 +15,7 @@ open Player
 open Thoth.Fetch
 open Thoth.Json
 open System
+open System.Text.RegularExpressions
 
 // MODEL
 
@@ -27,6 +28,11 @@ type RawCard =
       remote: bool
       unique: bool }
 
+type Settings = {
+    MinimumSips: int
+    MaximumSips: int
+}
+
 type Model =
     { Players: Player.Type list
       ActiveCards: RawCard list
@@ -35,7 +41,8 @@ type Model =
       CurrentPlayer: Player.Type option
       Counter: int
       DisplayPlayerNameDuplicateError: bool
-      InitialLoad: bool }
+      InitialLoad: bool
+      Settings: Settings }
 
 type Msg =
     | InitialLoad
@@ -51,6 +58,7 @@ type Msg =
     | HidePlayerNameDuplicate
     | DecrementActiveRoundCards
     | DecrementPlayerUseCards
+    | SaveSettings
 
 let getCards dispatch =
     promise {
@@ -58,6 +66,17 @@ let getCards dispatch =
         let! res = Fetch.get (url)
         AddCards res |> dispatch
     }
+
+
+type HtmlAttr =
+    | [<CompiledName("aria-valuenow")>] AriaValueNow of string
+    | [<CompiledName("aria-valuemin")>] AriaValueMin of string
+    | [<CompiledName("aria-valuemax")>] AriaValueMax of string
+    | [<CompiledName("data-toggle")>] DataToggle of string
+    | [<CompiledName("data-target")>] DataTarget of string
+    | [<CompiledName("data-dismiss")>] DataDismiss of string
+    | [<CompiledName("for")>] For of string
+    interface IHTMLProp
 
 let init (): Model * Cmd<Msg> =
     { Players = List.empty
@@ -67,7 +86,9 @@ let init (): Model * Cmd<Msg> =
       CurrentPlayer = None
       Counter = 0
       DisplayPlayerNameDuplicateError = false
-      InitialLoad = true }, Cmd.Empty
+      InitialLoad = true
+      Settings = { MinimumSips = 2
+                   MaximumSips = 10} }, Cmd.Empty
 
 let getDistinctCardCount cards =
     (List.map (fun c -> c.text) cards |> List.distinct).Length
@@ -97,6 +118,9 @@ let rec findNextActivePlayer (playerList: Player.Type list) model =
 
 // UPDATE
 
+
+let int_replacement_regex = new Regex("{int(:?:(\d+)-(\d+))?}")
+
 let getNextCard model =
     let distinctCount = (getDistinctCardCount model.Cards)
 
@@ -113,11 +137,15 @@ let getNextCard model =
     else
         let card = cards.Item(System.Random().Next() % cards.Length)
 
+        let min = model.Settings.MinimumSips
+        let max = model.Settings.MaximumSips
+
         let replacement_text =
             (Seq.map (fun w ->
-                if w = "{int}"
-                then (sprintf "%d" ((System.Random().Next()) % 9 + 2))
-                else w) (card.text.Split ' '))
+                let m = int_replacement_regex.Match w
+                match m.Success with
+                | true -> (sprintf "%d" ((System.Random().Next()) % (min - max) + min))
+                | false -> w) (card.text.Split ' '))
             |> String.concat " "
         Some { card with text = replacement_text }
 
@@ -152,8 +180,9 @@ let update (msg: Msg) (model: Model) =
              Cmd.Empty)
     | ChangeActivePlayer ->
         let nextPlayer =
-            findNextActivePlayer (List.filter (fun p ->
-                    p.Active || (Player.compareOption (model.CurrentPlayer) (Some p))) model.Players) model
+            findNextActivePlayer
+                (List.filter (fun p -> p.Active || (Player.compareOption (model.CurrentPlayer) (Some p))) model.Players)
+                model
 
         { model with
               CurrentPlayer = nextPlayer
@@ -193,12 +222,57 @@ let update (msg: Msg) (model: Model) =
                   (List.filter (fun card -> card.rounds <> 0)
                        (List.map (fun card -> { card with rounds = card.rounds - 1 }) model.ActiveCards)) }, Cmd.Empty
     | DecrementPlayerUseCards -> model, Cmd.Empty // TODO
+    | SaveSettings ->
+        let min = (match ((Browser.Dom.window.document.getElementById "minimum-sips") :?> Browser.Types.HTMLInputElement).value with
+                    | "" -> model.Settings.MinimumSips
+                    | value -> value |> int)
+        let max = (match ((Browser.Dom.window.document.getElementById "maximum-sips") :?> Browser.Types.HTMLInputElement).value with
+                    | "" -> model.Settings.MaximumSips
+                    | value -> value |> int)
+        { model with Settings = { model.Settings with MinimumSips = min
+                                                      MaximumSips = max } }, Cmd.Empty // TODO
 
 // VIEW (rendered with React)
 
+let settings model dispatch =
+    div
+        [ ClassName "modal fade"
+          Id "settings"
+          TabIndex -1
+          Role "dialog" ]
+        [ div
+            [ ClassName "modal-dialog"
+              Role "document" ]
+              [ div [ ClassName "modal-content" ]
+                    [ div [ ClassName "modal-body" ]
+                          [ div [ ClassName "form-group container" ]
+                                [ div [ ClassName "row" ]
+                                      [ label
+                                          [ For "minimum-sips"
+                                            ClassName "col" ] [ str "Minimum sips" ]
+                                        input
+                                            [ Name "minimum-sips"
+                                              ClassName "m-1 w-100 col"
+                                              Id "minimum-sips"
+                                              Placeholder (sprintf "%d" (model.Settings.MinimumSips))
+                                              MaxLength 2. ] ]
+                                  div [ ClassName "row" ]
+                                      [ label
+                                          [ For "maximum-sips"
+                                            ClassName "col" ] [ str "Maximum sips" ]
+                                        input
+                                            [ Name "maximum-sips"
+                                              ClassName "m-1 w-100 col"
+                                              Id "maximum-sips"
+                                              Placeholder (sprintf "%d" (model.Settings.MaximumSips))
+                                              MaxLength 2. ] ] ] ]
+                      div [ ClassName "modal-footer" ] [
+                        button [ ClassName "btn btn-primary"
+                                 DataDismiss "modal"
+                                 OnClick (fun _ -> dispatch SaveSettings)] [ str "Save" ] ] ] ] ]
+
 let addPlayer name model dispatch =
-    dispatch
-        (AddPlayer (Player.create name))
+    dispatch (AddPlayer(Player.create name))
     HidePlayerNameDuplicate |> ignore
     true
 
@@ -281,12 +355,6 @@ let displayCurrentCard model dispatch =
                                | None ->
                                    if model.Counter = 0 then "Click to start" else "No cards left") ] ] ] ]
 
-type HtmlAttr =
-    | [<CompiledName("aria-valuenow")>] AriaValueNow of string
-    | [<CompiledName("aria-valuemin")>] AriaValueMin of string
-    | [<CompiledName("aria-valuemax")>] AriaValueMax of string
-    interface IHTMLProp
-
 let displayInformationHeader model dispatch =
     div
         [ Id "active-player-header"
@@ -332,13 +400,19 @@ let view (model: Model) dispatch =
             if not (isNull element) then
                 if model.InitialLoad then dispatch InitialLoad)
           ClassName "container-fluid h-100" ]
-        [ div [ ClassName "row m-4" ] [ (displayInformationHeader model dispatch) ]
+        [ div [ ClassName "row m-4" ] [
+            div [ ClassName "col-1" ] [
+                button [ ClassName "btn btn-primary"
+                         DataToggle "modal"
+                         DataTarget "#settings" ] [ str "Settings" ] ]
+            (displayInformationHeader model dispatch) ]
           div
               [ ClassName "row m-2"
                 Style [ Height "65%" ] ]
               [ (displayCurrentCard model dispatch)
                 (sidebar model dispatch) ]
-          (activeCards model dispatch) ]
+          (activeCards model dispatch)
+          (settings model dispatch) ]
 
 // App
 Program.mkProgram init update view
