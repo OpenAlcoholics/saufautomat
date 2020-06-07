@@ -314,7 +314,7 @@ let displayInformationHeader model dispatch =
 let displayActiveCard (card: RawCard) model dispatch =
     div
         [ ClassName "card p-2 m-1"
-          Title card.text ] [ h5 [ ClassName "card-title h-100" ] [ str card.text ] ]
+          Title card.text ] [ h5 [ ClassName "card-title h-100" ] [ str (sprintf "%s (%d)" card.text card.rounds) ] ]
 
 let activeCards (model: Model) dispatch =
     div
