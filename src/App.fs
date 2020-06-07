@@ -11,16 +11,12 @@ open Browser
 open Fable.Core
 open Fable.React
 open Fable.React.Props
+open Player
 open Thoth.Fetch
 open Thoth.Json
 open System
 
 // MODEL
-
-type Player =
-    { Name: string
-      Active: bool
-      CardsPlayed: int }
 
 type RawCard =
     { text: string
@@ -32,11 +28,11 @@ type RawCard =
       unique: bool }
 
 type Model =
-    { Players: Player list
+    { Players: Player.Type list
       ActiveCards: RawCard list
       CurrentCard: RawCard option
       Cards: RawCard list
-      CurrentPlayer: Player option
+      CurrentPlayer: Player.Type option
       Counter: int
       DisplayPlayerNameDuplicateError: bool
       InitialLoad: bool }
@@ -48,9 +44,9 @@ type Msg =
     | IncrementCounter
     | AddActiveCard of RawCard
     | AddCards of RawCard list
-    | AddPlayer of Player
-    | RemovePlayer of Player
-    | TogglePlayerActivity of Player
+    | AddPlayer of Player.Type
+    | RemovePlayer of Player.Type
+    | TogglePlayerActivity of Player.Type
     | DisplayPlayerNameDuplicate
     | HidePlayerNameDuplicate
     | DecrementActiveRoundCards
@@ -73,10 +69,6 @@ let init (): Model * Cmd<Msg> =
       DisplayPlayerNameDuplicateError = false
       InitialLoad = true }, Cmd.Empty
 
-let playerComp p1 p2 =
-    p1.Name = p2.Name
-
-
 let getDistinctCardCount cards =
     (List.map (fun c -> c.text) cards |> List.distinct).Length
 
@@ -85,7 +77,7 @@ let unwrapOrMap (opt: 'b option) (m: 'b -> 't) (def: 't) =
     if opt.IsSome then m opt.Value else def
 
 
-let rec findNextActivePlayer (playerList: Player list) model =
+let rec findNextActivePlayer (playerList: Player.Type list) model =
     if playerList.Length = 0 then
         None
     else if playerList.Length = 1 then
@@ -93,11 +85,11 @@ let rec findNextActivePlayer (playerList: Player list) model =
     else
         match model.CurrentPlayer with
         | Some player ->
-            match List.tryFindIndex (fun p -> playerComp p player) playerList with
+            match List.tryFindIndex ((=) player) playerList with
             | Some index ->
                 let player = playerList.Item((index + 1) % playerList.Length)
                 match player.Active with
-                | false -> findNextActivePlayer (List.filter (fun p -> player.Name <> p.Name) playerList) model
+                | false -> findNextActivePlayer (List.filter ((<>) player) playerList) model
                 | true -> Some player
             | None -> Some model.Players.Head
         | None -> Some model.Players.Head
@@ -116,7 +108,6 @@ let getNextCard model =
                                   true && if distinctCount > 1
                                           then card.text <> (unwrapOrMap model.CurrentCard (fun c -> c.text) "")
                                           else true) model.Cards
-
     if cards.Length = 0 then
         None
     else
@@ -161,17 +152,14 @@ let update (msg: Msg) (model: Model) =
              Cmd.Empty)
     | ChangeActivePlayer ->
         let nextPlayer =
-            findNextActivePlayer
-                (List.filter (fun p ->
-                    p.Active || (match model.CurrentPlayer with
-                                 | Some cp -> cp.Name = p.Name
-                                 | None -> false)) model.Players) model
+            findNextActivePlayer (List.filter (fun p ->
+                    p.Active || (Player.compareOption (model.CurrentPlayer) (Some p))) model.Players) model
 
         { model with
               CurrentPlayer = nextPlayer
               Players =
                   List.map (fun player ->
-                      if player.Name = (unwrapOrMap nextPlayer (fun p -> p.Name) "")
+                      if (Player.compareOption (Some player) nextPlayer)
                       then { player with CardsPlayed = player.CardsPlayed + 1 }
                       else player) model.Players }, Cmd.Empty
     | IncrementCounter ->
@@ -185,17 +173,17 @@ let update (msg: Msg) (model: Model) =
         | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
     | RemovePlayer player ->
         { model with
-              Players = (List.filter (fun p -> p.Name <> player.Name) model.Players)
+              Players = (List.filter (fun p -> p <> player) model.Players)
               CurrentPlayer =
                   match model.CurrentPlayer with
                   | Some currentPlayer ->
-                      if player.Name = currentPlayer.Name then None else model.CurrentPlayer
+                      if player = currentPlayer then None else model.CurrentPlayer
                   | None -> None }, Cmd.Empty
     | TogglePlayerActivity player ->
         { model with
               Players =
                   (List.map (fun p ->
-                      if p.Name = player.Name then { p with Active = not p.Active } else p) model.Players) }, Cmd.Empty
+                      if p = player then { p with Active = not p.Active } else p) model.Players) }, Cmd.Empty
     | DisplayPlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = true }, Cmd.Empty
     | HidePlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = false }, Cmd.Empty
     | AddActiveCard card -> { model with ActiveCards = card :: model.ActiveCards }, Cmd.Empty
@@ -204,25 +192,20 @@ let update (msg: Msg) (model: Model) =
               ActiveCards =
                   (List.filter (fun card -> card.rounds <> 0)
                        (List.map (fun card -> { card with rounds = card.rounds - 1 }) model.ActiveCards)) }, Cmd.Empty
+    | DecrementPlayerUseCards -> model, Cmd.Empty // TODO
 
 // VIEW (rendered with React)
 
 let addPlayer name model dispatch =
     dispatch
-        (AddPlayer
-            { Name = name
-              Active = true
-              CardsPlayed = 0 })
+        (AddPlayer (Player.create name))
     HidePlayerNameDuplicate |> ignore
     true
 
 let tryAddPlayer name model dispatch =
-    match List.tryFind (fun p -> p.Name = name) model.Players with
+    match List.tryFind ((=) (Player.create name)) model.Players with
     | Some _ -> false
     | None -> addPlayer name model dispatch
-
-let inline (|?) (a: 'a option) b =
-    if a.IsSome then a.Value else b
 
 let displayPlayer player model dispatch =
     div
