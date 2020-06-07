@@ -46,13 +46,15 @@ type Msg =
     | ChangeActiveCard
     | ChangeActivePlayer
     | IncrementCounter
-    | UpdateActiveCard of RawCard
+    | AddActiveCard of RawCard
     | AddCards of RawCard list
     | AddPlayer of Player
     | RemovePlayer of Player
     | TogglePlayerActivity of Player
     | DisplayPlayerNameDuplicate
     | HidePlayerNameDuplicate
+    | DecrementActiveRoundCards
+    | DecrementPlayerUseCards
 
 let getCards dispatch =
     promise {
@@ -79,26 +81,26 @@ let getDistinctCardCount cards =
     (List.map (fun c -> c.text) cards |> List.distinct).Length
 
 
-let unwrapOr (opt: 'b option) (m: 'b -> 't) (def: 't) =
+let unwrapOrMap (opt: 'b option) (m: 'b -> 't) (def: 't) =
     if opt.IsSome then m opt.Value else def
 
 
 let rec findNextActivePlayer (playerList: Player list) model =
     if playerList.Length = 0 then
-            None
-         else if playerList.Length = 1 then
-             Some playerList.Head
-         else
-             match model.CurrentPlayer with
-             | Some player ->
-                 match List.tryFindIndex (fun p -> playerComp p player) playerList with
-                 | Some index ->
-                     let player = playerList.Item((index + 1) % playerList.Length)
-                     match player.Active with
-                     | false -> findNextActivePlayer (List.filter (fun p -> player.Name <> p.Name) playerList) model
-                     | true -> Some player
-                 | None -> Some model.Players.Head
-             | None -> Some model.Players.Head
+        None
+    else if playerList.Length = 1 then
+        Some playerList.Head
+    else
+        match model.CurrentPlayer with
+        | Some player ->
+            match List.tryFindIndex (fun p -> playerComp p player) playerList with
+            | Some index ->
+                let player = playerList.Item((index + 1) % playerList.Length)
+                match player.Active with
+                | false -> findNextActivePlayer (List.filter (fun p -> player.Name <> p.Name) playerList) model
+                | true -> Some player
+            | None -> Some model.Players.Head
+        | None -> Some model.Players.Head
 
 
 // UPDATE
@@ -112,7 +114,7 @@ let getNextCard model =
                                   not card.personal
                               else
                                   true && if distinctCount > 1
-                                          then card.text <> (unwrapOr model.CurrentCard (fun c -> c.text) "")
+                                          then card.text <> (unwrapOrMap model.CurrentCard (fun c -> c.text) "")
                                           else true) model.Cards
 
     if cards.Length = 0 then
@@ -146,12 +148,17 @@ let update (msg: Msg) (model: Model) =
         { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
     | ChangeActiveCard ->
         let card = getNextCard model
+
         { model with
               CurrentCard = card
               Cards = decreaseCardCount card model.Cards },
-        (if card.IsSome
-         then Cmd.ofSub (fun dispatch -> dispatch IncrementCounter)
-         else Cmd.Empty)
+        (if card.IsSome then
+            Cmd.ofSub (fun dispatch ->
+                do dispatch IncrementCounter
+                   // dispatch DecrementPlayerUseCards
+                   (if (card.IsSome && card.Value.rounds <> 0) then AddActiveCard card.Value |> dispatch))
+         else
+             Cmd.Empty)
     | ChangeActivePlayer ->
         let nextPlayer =
             findNextActivePlayer
@@ -160,8 +167,13 @@ let update (msg: Msg) (model: Model) =
                                  | Some cp -> cp.Name = p.Name
                                  | None -> false)) model.Players) model
 
-        { model with CurrentPlayer = nextPlayer
-                     Players = List.map (fun player -> if player.Name = (unwrapOr nextPlayer (fun p -> p.Name) "") then { player with CardsPlayed = player.CardsPlayed + 1 } else player  ) model.Players }, Cmd.Empty
+        { model with
+              CurrentPlayer = nextPlayer
+              Players =
+                  List.map (fun player ->
+                      if player.Name = (unwrapOrMap nextPlayer (fun p -> p.Name) "")
+                      then { player with CardsPlayed = player.CardsPlayed + 1 }
+                      else player) model.Players }, Cmd.Empty
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
     | AddCards cards ->
@@ -186,7 +198,12 @@ let update (msg: Msg) (model: Model) =
                       if p.Name = player.Name then { p with Active = not p.Active } else p) model.Players) }, Cmd.Empty
     | DisplayPlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = true }, Cmd.Empty
     | HidePlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = false }, Cmd.Empty
-    | UpdateActiveCard card -> model, Cmd.Empty // TODO
+    | AddActiveCard card -> { model with ActiveCards = card :: model.ActiveCards }, Cmd.Empty
+    | DecrementActiveRoundCards ->
+        { model with
+              ActiveCards =
+                  (List.filter (fun card -> card.rounds <> 0)
+                       (List.map (fun card -> { card with rounds = card.rounds - 1 }) model.ActiveCards)) }, Cmd.Empty
 
 // VIEW (rendered with React)
 
@@ -314,7 +331,8 @@ let displayInformationHeader model dispatch =
 let displayActiveCard (card: RawCard) model dispatch =
     div
         [ ClassName "card p-2 m-1"
-          Title card.text ] [ h5 [ ClassName "card-title h-100" ] [ str (sprintf "%s (%d)" card.text card.rounds) ] ]
+          Title card.text ]
+        [ h5 [ ClassName "card-title h-100" ] [ str (sprintf "%s (%d)" card.text card.rounds) ] ]
 
 let activeCards (model: Model) dispatch =
     div
