@@ -34,7 +34,8 @@ type Settings =
       MaximumSips: int }
 
 type RoundInformation =
-    { CardsToPlay: int }
+    { CardsToPlay: int
+      InitialPlayerIndex: int }
 
 type Model =
     { Players: Player.Type list
@@ -111,13 +112,19 @@ let init (): Model * Cmd<Msg> =
           { MinimumSips = 2
             MaximumSips = 10 }
       Round = 0
-      RoundInformation = { CardsToPlay = 0 } }, Cmd.Empty
+      RoundInformation = { CardsToPlay = 0
+                           InitialPlayerIndex = -1 } }, Cmd.Empty
 
 let getDistinctCardCount cards =
     (List.map (fun c -> c.id) cards |> List.distinct).Length
 
 let unwrapOrMap (opt: 'b option) (m: 'b -> 't) (def: 't) =
     if opt.IsSome then m opt.Value else def
+
+let unwrapOr (opt: 'b option) (def: 'b): 'b =
+    match opt with
+    | Some value -> value
+    | None -> def
 
 let rec findNextActivePlayer (playerList: Player.Type list) model =
     if playerList.Length = 0 then
@@ -145,18 +152,19 @@ let filterCardsForTurn model =
 
     let cards =
         List.filter (fun card ->
-            card.count > 0 && if model.Players.Length = 0 then
-                                  (not card.personal) && card.rounds = 0
-                              else
-                                  true && if distinctCount > 1 // TODO: this should be checked after everything else
-                                          then card.id <> (unwrapOrMap model.CurrentCard (fun c -> c.id) -1)
-                                          else true) model.Cards
+            card.count > 0
+            && if model.Players.Length = 0 then
+                (not card.personal) && card.rounds = 0
+               else
+                   true && if distinctCount > 1 // TODO: this should be checked after everything else
+                           then card.id <> (unwrapOrMap model.CurrentCard (fun c -> c.id) -1)
+                           else true) model.Cards
 
     List.filter (fun card ->
         if card.unique
         then (List.filter (fun activeCard -> card.unique && (activeCard.id = card.id)) model.ActiveCards).Length = 0
         else true)
-    cards
+        cards
 
 let getNextCard model =
     let cards = filterCardsForTurn model
@@ -192,9 +200,9 @@ let explodeCards cards =
 let roundHasEnded model =
     model.RoundInformation.CardsToPlay <= 0
 
-let getPlayerIndex player players =
+let getPlayerIndex (player: Player.Type option) (players: Player.Type list) =
     match player with
-    | Some p -> List.tryFindIndex p players
+    | Some p -> (List.tryFindIndex ((=) p) players)
     | None -> None
 
 let getActivePlayers model =
@@ -211,7 +219,7 @@ let update (msg: Msg) (model: Model) =
         { model with
               CurrentCard = card
               Cards = decreaseCardCount card model.Cards
-              RoundInformation = { CardsToPlay = max (model.RoundInformation.CardsToPlay - 1) 0 } },
+              RoundInformation = { model.RoundInformation with CardsToPlay = max (model.RoundInformation.CardsToPlay - 1) 0 } },
         (if card.IsSome then
             Cmd.ofSub (fun dispatch ->
                 do dispatch IncrementCounter
@@ -243,16 +251,17 @@ let update (msg: Msg) (model: Model) =
         { model with
               Players = model.Players @ [ player ]
               RoundInformation =
-                  { CardsToPlay =
-                        model.RoundInformation.CardsToPlay
-                        + 1 (*TODO: should this only be executed when the added player has a turn in this round?*)  } },
+                  { model.RoundInformation with
+                        CardsToPlay =
+                            model.RoundInformation.CardsToPlay
+                            + 1 (*TODO: should this only be executed when the added player has a turn in this round?*)  } },
         match model.CurrentPlayer with
         | Some _ -> Cmd.Empty
         | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
     | RemovePlayer player ->
         { model with
               Players = (List.filter (fun p -> p <> player) model.Players)
-              RoundInformation = { CardsToPlay = model.RoundInformation.CardsToPlay - 1 }
+              RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - (if decreaseCardToPlay then 1 else 0) }
               CurrentPlayer =
                   match model.CurrentPlayer with
                   | Some currentPlayer ->
@@ -292,7 +301,10 @@ let update (msg: Msg) (model: Model) =
     | IncrementRound ->
         { model with
               Round = model.Round + 1
-              RoundInformation = { CardsToPlay = (getActivePlayers model).Length } }, Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
+              RoundInformation =
+                  { CardsToPlay = (getActivePlayers model).Length
+                    InitialPlayerIndex = unwrapOr (getPlayerIndex model.CurrentPlayer model.Players) -1 } },
+        Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
 
 // VIEW (rendered with React)
 
