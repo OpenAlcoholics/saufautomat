@@ -112,8 +112,9 @@ let init (): Model * Cmd<Msg> =
           { MinimumSips = 2
             MaximumSips = 10 }
       Round = 0
-      RoundInformation = { CardsToPlay = 0
-                           InitialPlayerIndex = -1 } }, Cmd.Empty
+      RoundInformation =
+          { CardsToPlay = 0
+            InitialPlayerIndex = -1 } }, Cmd.Empty
 
 let getDistinctCardCount cards =
     (List.map (fun c -> c.id) cards |> List.distinct).Length
@@ -163,8 +164,7 @@ let filterCardsForTurn model =
     List.filter (fun card ->
         if card.unique
         then (List.filter (fun activeCard -> card.unique && (activeCard.id = card.id)) model.ActiveCards).Length = 0
-        else true)
-        cards
+        else true) cards
 
 let getNextCard model =
     let cards = filterCardsForTurn model
@@ -219,7 +219,8 @@ let update (msg: Msg) (model: Model) =
         { model with
               CurrentCard = card
               Cards = decreaseCardCount card model.Cards
-              RoundInformation = { model.RoundInformation with CardsToPlay = max (model.RoundInformation.CardsToPlay - 1) 0 } },
+              RoundInformation =
+                  { model.RoundInformation with CardsToPlay = max (model.RoundInformation.CardsToPlay - 1) 0 } },
         (if card.IsSome then
             Cmd.ofSub (fun dispatch ->
                 do dispatch IncrementCounter
@@ -261,7 +262,7 @@ let update (msg: Msg) (model: Model) =
     | RemovePlayer player ->
         { model with
               Players = (List.filter (fun p -> p <> player) model.Players)
-              RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - (if decreaseCardToPlay then 1 else 0) }
+              RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - 1 }
               CurrentPlayer =
                   match model.CurrentPlayer with
                   | Some currentPlayer ->
@@ -299,12 +300,14 @@ let update (msg: Msg) (model: Model) =
                         MaximumSips = max } }, Cmd.Empty
     | Reset -> init ()
     | IncrementRound ->
-        { model with
-              Round = model.Round + 1
-              RoundInformation =
-                  { CardsToPlay = (getActivePlayers model).Length
-                    InitialPlayerIndex = unwrapOr (getPlayerIndex model.CurrentPlayer model.Players) -1 } },
-        Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
+        (if model.Players.Length > 0 then
+            { model with
+                  Round = model.Round + 1
+                  RoundInformation =
+                      { CardsToPlay = (getActivePlayers model).Length
+                        InitialPlayerIndex = unwrapOr (getPlayerIndex model.CurrentPlayer model.Players) -1 } }
+         else
+             model), Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
 
 // VIEW (rendered with React)
 
