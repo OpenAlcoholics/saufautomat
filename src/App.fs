@@ -289,8 +289,10 @@ let update (msg: Msg) (model: Model) =
                         MinimumSips = min
                         MaximumSips = max } }, Cmd.Empty
     | Reset -> init ()
-    | IncrementRound -> { model with Round = model.Round + 1
-                                     RoundInformation = { CardsToPlay = (getActivePlayers model).Length } }, Cmd.Empty
+    | IncrementRound ->
+        { model with
+              Round = model.Round + 1
+              RoundInformation = { CardsToPlay = (getActivePlayers model).Length } }, Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
 
 // VIEW (rendered with React)
 
