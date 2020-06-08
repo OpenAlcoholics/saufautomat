@@ -155,10 +155,11 @@ let filterCardsForTurn model =
                                           then card.id <> (unwrapOrMap model.CurrentCard (fun c -> c.id) -1)
                                           else true) model.Cards
 
-    List.filter
-        (fun card ->
-            (List.filter (fun activeCard -> not (activeCard.id = card.id && card.unique)) model.ActiveCards).Length = 0)
-        cards
+//    List.filter
+//        (fun card ->
+//            (List.filter (fun activeCard -> if card.unique then not (activeCard.id = card.id) else true) model.ActiveCards).Length = 0)
+//        cards
+    cards
 
 let getNextCard model =
     let cards = filterCardsForTurn model
@@ -282,7 +283,7 @@ let update (msg: Msg) (model: Model) =
               Settings =
                   { model.Settings with
                         MinimumSips = min
-                        MaximumSips = max } }, Cmd.Empty // TODO
+                        MaximumSips = max } }, Cmd.Empty
     | Reset -> init ()
     | IncrementRound -> { model with Round = model.Round + 1
                                      RoundInformation = { CardsToPlay = (getActivePlayers model).Length } }, Cmd.Empty
