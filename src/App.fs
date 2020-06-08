@@ -33,9 +33,8 @@ type Settings =
     { MinimumSips: int
       MaximumSips: int }
 
-type RoundInformation = {
-    CardsToPlay: int
-}
+type RoundInformation =
+    { CardsToPlay: int }
 
 type Model =
     { Players: Player.Type list
@@ -48,7 +47,7 @@ type Model =
       InitialLoad: bool
       Settings: Settings
       Round: int
-      RoundInformation : RoundInformation }
+      RoundInformation: RoundInformation }
 
 type Msg =
     | InitialLoad
@@ -112,9 +111,7 @@ let init (): Model * Cmd<Msg> =
           { MinimumSips = 2
             MaximumSips = 10 }
       Round = 0
-      RoundInformation = {
-          CardsToPlay = 0
-      }}, Cmd.Empty
+      RoundInformation = { CardsToPlay = 0 } }, Cmd.Empty
 
 let getDistinctCardCount cards =
     (List.map (fun c -> c.id) cards |> List.distinct).Length
@@ -149,16 +146,16 @@ let filterCardsForTurn model =
     let cards =
         List.filter (fun card ->
             card.count > 0 && if model.Players.Length = 0 then
-                                  not card.personal
+                                  (not card.personal) && card.rounds = 0
                               else
                                   true && if distinctCount > 1 // TODO: this should be checked after everything else
                                           then card.id <> (unwrapOrMap model.CurrentCard (fun c -> c.id) -1)
                                           else true) model.Cards
 
-//    List.filter
-//        (fun card ->
-//            (List.filter (fun activeCard -> if card.unique then not (activeCard.id = card.id) else true) model.ActiveCards).Length = 0)
-//        cards
+    List.filter (fun card ->
+        if card.unique
+        then (List.filter (fun activeCard -> card.unique && (activeCard.id = card.id)) model.ActiveCards).Length = 0
+        else true)
     cards
 
 let getNextCard model =
@@ -234,14 +231,21 @@ let update (msg: Msg) (model: Model) =
                   List.map (fun player ->
                       if (Player.compareOption (Some player) nextPlayer)
                       then { player with CardsPlayed = player.CardsPlayed + 1 }
-                      else player) model.Players }, if (roundHasEnded model) then Cmd.ofSub(fun dispatch -> dispatch IncrementRound) else Cmd.Empty
+                      else player) model.Players },
+        (if (roundHasEnded model)
+         then Cmd.ofSub (fun dispatch -> dispatch IncrementRound)
+         else Cmd.Empty)
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
     | AddCards cards ->
         { model with Cards = (explodeCards cards) }, Cmd.Empty
     | AddPlayer player ->
-        { model with Players = model.Players @ [ player ]
-                     RoundInformation = { CardsToPlay = model.RoundInformation.CardsToPlay + 1 (*TODO: should this only be executed when the added player has a turn in this round?*) } },
+        { model with
+              Players = model.Players @ [ player ]
+              RoundInformation =
+                  { CardsToPlay =
+                        model.RoundInformation.CardsToPlay
+                        + 1 (*TODO: should this only be executed when the added player has a turn in this round?*)  } },
         match model.CurrentPlayer with
         | Some _ -> Cmd.Empty
         | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
@@ -325,9 +329,9 @@ let settings model dispatch =
                       div [ ClassName "modal-footer" ]
                           [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
                             button
-                              [ ClassName "btn btn-primary"
-                                DataDismiss "modal"
-                                OnClick(fun _ -> dispatch SaveSettings) ] [ str "Save" ] ] ] ] ]
+                                [ ClassName "btn btn-primary"
+                                  DataDismiss "modal"
+                                  OnClick(fun _ -> dispatch SaveSettings) ] [ str "Save" ] ] ] ] ]
 
 let addPlayer name model dispatch =
     dispatch (AddPlayer(Player.create name))
@@ -428,7 +432,7 @@ let displayInformationHeader model dispatch =
           span [ Title "Total number of cards" ] [ str (sprintf "%d " model.Cards.Length) ]
           span [] [ str " " ]
           span [ Title "Distinct number of cards" ] [ str (sprintf "(%d)" (getDistinctCardCount model.Cards)) ]
-          span [ ] [ str (sprintf " | Runde %d" model.Round) ]
+          span [] [ str (sprintf " | Runde %d" model.Round) ]
           div [ ClassName "progress" ]
               [ div
                   [ ClassName "progress-bar"
