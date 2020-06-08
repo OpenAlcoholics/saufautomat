@@ -190,7 +190,7 @@ let explodeCards cards =
     |> List.ofSeq
 
 let roundHasEnded model =
-    model.RoundInformation.CardsToPlay = 0
+    model.RoundInformation.CardsToPlay <= 0
 
 let getPlayerIndex player players =
     match player with
