@@ -211,7 +211,7 @@ let update (msg: Msg) (model: Model) =
         { model with
               CurrentCard = card
               Cards = decreaseCardCount card model.Cards
-              RoundInformation = { CardsToPlay = model.RoundInformation.CardsToPlay - 1 } },
+              RoundInformation = { CardsToPlay = max (model.RoundInformation.CardsToPlay - 1) 0 } },
         (if card.IsSome then
             Cmd.ofSub (fun dispatch ->
                 do dispatch IncrementCounter
