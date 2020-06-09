@@ -421,11 +421,13 @@ let displayCurrentCard model dispatch =
         [ ClassName "card d-flex col"
           Id "active-card" ]
         [ div [ ClassName "card-body flex-wrap" ]
-              [ button
+              [ span  [ ] [ str (if model.CurrentCard.IsSome then (sprintf "%d" model.CurrentCard.Value.id) else "") ]
+                button
                   [ OnClick(fun _ ->
                       ChangeActiveCard |> dispatch
                       ChangeActivePlayer |> dispatch)
-                    ClassName "card-body card-title btn btn-dark w-100 h-100"
+                    ClassName "card-body card-title btn btn-dark w-100"
+                    Style [ Height "95%" ]
                     Id "current-card-body"
                     Disabled(model.CurrentCard.IsNone && model.Counter > 0) ]
                     [ span [ ClassName "h3" ]
