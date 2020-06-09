@@ -31,7 +31,8 @@ type RawCard =
 
 type Settings =
     { MinimumSips: int
-      MaximumSips: int }
+      MaximumSips: int
+      Remote : bool }
 
 type RoundInformation =
     { CardsToPlay: int
@@ -65,6 +66,7 @@ type Msg =
     | DecrementActiveRoundCards
     | DecrementPlayerUseCards
     | SaveSettings
+    | ChangeRemoteSetting
     | Reset
     | IncrementRound
 
@@ -96,6 +98,7 @@ type HtmlAttr =
     | [<CompiledName("data-toggle")>] DataToggle of string
     | [<CompiledName("data-target")>] DataTarget of string
     | [<CompiledName("data-dismiss")>] DataDismiss of string
+    | [<CompiledName("type")>] InputType of string
     | [<CompiledName("for")>] For of string
     interface IHTMLProp
 
@@ -110,7 +113,8 @@ let init (): Model * Cmd<Msg> =
       InitialLoad = true
       Settings =
           { MinimumSips = 2
-            MaximumSips = 10 }
+            MaximumSips = 10
+            Remote = true }
       Round = 0
       RoundInformation =
           { CardsToPlay = 0
@@ -154,6 +158,7 @@ let filterCardsForTurn model =
     let cards =
         List.filter (fun card ->
             card.count > 0
+            && ((model.Settings.Remote && card.remote) || (not model.Settings.Remote))
             && if model.Players.Length = 0 then
                 (not card.personal) && card.rounds = 0
                else
@@ -282,6 +287,10 @@ let update (msg: Msg) (model: Model) =
                   (List.filter (fun card -> card.rounds <> 0)
                        (List.map (fun card -> { card with rounds = card.rounds - 1 }) model.ActiveCards)) }, Cmd.Empty
     | DecrementPlayerUseCards -> model, Cmd.Empty // TODO
+    | ChangeRemoteSetting ->
+        let remote = ((Browser.Dom.window.document.getElementById "remote") :?> Browser.Types.HTMLInputElement).``checked``
+
+        { model with Settings = { model.Settings with Remote = remote } }, Cmd.Empty
     | SaveSettings ->
         let min =
             (match ((Browser.Dom.window.document.getElementById "minimum-sips") :?> Browser.Types.HTMLInputElement).value with
@@ -342,7 +351,18 @@ let settings model dispatch =
                                               ClassName "m-1 w-100 col"
                                               Id "maximum-sips"
                                               Placeholder(sprintf "%d" (model.Settings.MaximumSips))
-                                              MaxLength 2. ] ] ] ]
+                                              MaxLength 2. ] ]
+                                  div [ ClassName "row" ]
+                                      [ label
+                                          [ For "remote"
+                                            ClassName "col" ] [ str "Remote" ]
+                                        input
+                                            [ Name "remote"
+                                              OnClick (fun _ -> dispatch ChangeRemoteSetting)
+                                              InputType "checkbox"
+                                              ClassName "m-1 w-100 col"
+                                              Id "remote"
+                                              Checked (model.Settings.Remote) ] ] ] ]
                       div [ ClassName "modal-footer" ]
                           [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
                             button
