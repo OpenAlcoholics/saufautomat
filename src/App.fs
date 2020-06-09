@@ -373,7 +373,8 @@ let displayPlayer player model dispatch =
                 div [ ClassName "d-flex justify-content-between" ]
                     [ button
                         [ ClassName "card-text btn btn-secondary toggle-button"
-                          OnClick(fun _ -> TogglePlayerActivity player |> dispatch) ] [ str "Toggle" ]
+                          OnClick(fun _ -> TogglePlayerActivity player |> dispatch) ] [
+                        str (if player.Active then "Suspend" else "Unsuspend") ]
                       button
                           [ ClassName "card-text btn btn-secondary delete-button"
                             OnClick(fun _ ->
