@@ -77,18 +77,15 @@ let getCards dispatch =
         AddCards res |> dispatch
     }
 
-//[<Emit("(new Audio($0)).play();")>]
-//let play (fileName: string) = jsNative
-let play () =
-    ((Browser.Dom.window.document.getElementById "nextcard-audio") :?> Browser.Types.HTMLMediaElement).play()
+let play id =
+    ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).play()
 
 [<Emit("$0.currentTime = $2")>]
 let assignCurrentTime element value = jsNative
 
-let stop () =
-    ((Browser.Dom.window.document.getElementById "nextcard-audio") :?> Browser.Types.HTMLMediaElement).pause()
-    assignCurrentTime
-        ((Browser.Dom.window.document.getElementById "nextcard-audio") :?> Browser.Types.HTMLMediaElement) "0.0"
+let stop id =
+    ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).pause()
+    assignCurrentTime ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement) "0.0"
 
 
 type HtmlAttr =
@@ -203,7 +200,7 @@ let explodeCards cards =
     |> List.ofSeq
 
 let roundHasEnded model =
-    model.RoundInformation.CardsToPlay <= 0
+    model.RoundInformation.CardsToPlay <= 0 && model.Players.Length > 0
 
 let getPlayerIndex (player: Player.Type option) (players: Player.Type list) =
     match player with
@@ -219,17 +216,23 @@ let update (msg: Msg) (model: Model) =
         { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
     | ChangeActiveCard ->
         let card = getNextCard model
-        stop ()
-        play ()
-        { model with
-              CurrentCard = card
-              Cards = decreaseCardCount card model.Cards
-              RoundInformation =
-                  { model.RoundInformation with CardsToPlay = max (model.RoundInformation.CardsToPlay - 1) 0 } },
+        let model =
+            { model with
+                  CurrentCard = card
+                  Cards = decreaseCardCount card model.Cards
+                  RoundInformation =
+                      { model.RoundInformation with CardsToPlay = max (model.RoundInformation.CardsToPlay - 1) 0 } }
+
+        let audioId =
+            (if roundHasEnded model then "nextround-audio" else "nextcard-audio")
+        if card.IsSome then
+            stop audioid
+            play audioid
+
+        model,
         (if card.IsSome then
             Cmd.ofSub (fun dispatch ->
                 do dispatch IncrementCounter
-                   // dispatch DecrementPlayerUseCards
                    (if (card.IsSome && card.Value.rounds <> 0) then AddActiveCard card.Value |> dispatch))
          else
              Cmd.Empty)
@@ -393,8 +396,8 @@ let displayPlayer player model dispatch =
                 div [ ClassName "d-flex justify-content-between" ]
                     [ button
                         [ ClassName "card-text btn btn-secondary toggle-button"
-                          OnClick(fun _ -> TogglePlayerActivity player |> dispatch) ] [
-                        str (if player.Active then "Suspend" else "Unsuspend") ]
+                          OnClick(fun _ -> TogglePlayerActivity player |> dispatch) ]
+                          [ str (if player.Active then "Suspend" else "Unsuspend") ]
                       button
                           [ ClassName "card-text btn btn-secondary delete-button"
                             OnClick(fun _ ->
@@ -508,6 +511,10 @@ let view (model: Model) dispatch =
                     [ audio
                         [ Id "nextcard-audio"
                           Src "/nextcard.mp3" ] [] ]
+                figure []
+                    [ audio
+                        [ Id "nextround-audio"
+                          Src "/nextround.mp3" ] [] ]
                 div [ ClassName "col-1" ]
                     [ button
                         [ ClassName "btn btn-primary m-1"
