@@ -72,7 +72,7 @@ type Msg =
 
 let getCards dispatch =
     promise {
-        let url = "https://raw.githubusercontent.com/OpenAlcoholics/drinking-game-cards/develop/tasks.json"
+        let url = "https://raw.githubusercontent.com/OpenAlcoholics/drinking-game-cards/v1/tasks.json"
         let! res = Fetch.get (url)
         AddCards res |> dispatch
     }
