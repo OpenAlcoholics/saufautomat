@@ -32,7 +32,7 @@ type RawCard =
 type Settings =
     { MinimumSips: int
       MaximumSips: int
-      Remote : bool }
+      Remote: bool }
 
 type RoundInformation =
     { CardsToPlay: int
@@ -154,8 +154,7 @@ let filterCardsForTurn model =
 
     let cards =
         List.filter (fun card ->
-            card.count > 0
-            && ((model.Settings.Remote && card.remote) || (not model.Settings.Remote))
+            card.count > 0 && ((model.Settings.Remote && card.remote) || (not model.Settings.Remote))
             && if model.Players.Length = 0 then
                 (not card.personal) && card.rounds = 0
                else
@@ -210,12 +209,16 @@ let getPlayerIndex (player: Player.Type option) (players: Player.Type list) =
 let getActivePlayers model =
     List.filter (fun player -> player.Active) model.Players
 
+let isCurrentPlayer player model =
+    Player.compareOption (Some player) model.CurrentPlayer
+
 let update (msg: Msg) (model: Model) =
     match msg with
     | InitialLoad ->
         { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
     | ChangeActiveCard ->
         let card = getNextCard model
+
         let model =
             { model with
                   CurrentCard = card
@@ -225,6 +228,7 @@ let update (msg: Msg) (model: Model) =
 
         let audioId =
             (if roundHasEnded model then "nextround-audio" else "nextcard-audio")
+
         if card.IsSome then
             stop audioId
             play audioId
@@ -275,12 +279,22 @@ let update (msg: Msg) (model: Model) =
                   match model.CurrentPlayer with
                   | Some currentPlayer ->
                       if player = currentPlayer then None else model.CurrentPlayer
-                  | None -> None }, Cmd.Empty
+                  | None -> None },
+        (if (isCurrentPlayer player model)
+         then Cmd.ofSub (fun dispatch -> dispatch ChangeActiveCard)
+         else Cmd.Empty)
     | TogglePlayerActivity player ->
+
         { model with
               Players =
                   (List.map (fun p ->
-                      if p = player then { p with Active = not p.Active } else p) model.Players) }, Cmd.Empty
+                      if p = player then { p with Active = not p.Active } else p) model.Players) },
+        (if (isCurrentPlayer player model) then
+            Cmd.ofSub (fun dispatch ->
+                do dispatch ChangeActivePlayer
+                   dispatch ChangeActiveCard)
+         else
+             Cmd.Empty)
     | DisplayPlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = true }, Cmd.Empty
     | HidePlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = false }, Cmd.Empty
     | AddActiveCard card -> { model with ActiveCards = card :: model.ActiveCards }, Cmd.Empty
@@ -291,7 +305,8 @@ let update (msg: Msg) (model: Model) =
                        (List.map (fun card -> { card with rounds = card.rounds - 1 }) model.ActiveCards)) }, Cmd.Empty
     | DecrementPlayerUseCards -> model, Cmd.Empty // TODO
     | ChangeRemoteSetting ->
-        let remote = ((Browser.Dom.window.document.getElementById "remote") :?> Browser.Types.HTMLInputElement).``checked``
+        let remote =
+            ((Browser.Dom.window.document.getElementById "remote") :?> Browser.Types.HTMLInputElement).``checked``
 
         { model with Settings = { model.Settings with Remote = remote } }, Cmd.Empty
     | SaveSettings ->
@@ -361,11 +376,11 @@ let settings model dispatch =
                                             ClassName "col" ] [ str "Remote" ]
                                         input
                                             [ Name "remote"
-                                              OnClick (fun _ -> dispatch ChangeRemoteSetting)
+                                              OnClick(fun _ -> dispatch ChangeRemoteSetting)
                                               InputType "checkbox"
                                               ClassName "m-1 w-100 col"
                                               Id "remote"
-                                              Checked (model.Settings.Remote) ] ] ] ]
+                                              Checked(model.Settings.Remote) ] ] ] ]
                       div [ ClassName "modal-footer" ]
                           [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
                             button
@@ -444,15 +459,19 @@ let displayCurrentCard model dispatch =
         [ ClassName "card d-flex col"
           Id "active-card" ]
         [ div [ ClassName "card-body flex-wrap" ]
-              [ span  [ ] [ str (if model.CurrentCard.IsSome then (sprintf "%d" model.CurrentCard.Value.id) else "") ]
+              [ span []
+                    [ str
+                        (if model.CurrentCard.IsSome
+                         then (sprintf "%d" model.CurrentCard.Value.id)
+                         else "") ]
                 button
-                  [ OnClick(fun _ ->
-                      ChangeActiveCard |> dispatch
-                      ChangeActivePlayer |> dispatch)
-                    ClassName "card-body card-title btn btn-dark w-100"
-                    Style [ Height "95%" ]
-                    Id "current-card-body"
-                    Disabled(model.CurrentCard.IsNone && model.Counter > 0) ]
+                    [ OnClick(fun _ ->
+                        ChangeActiveCard |> dispatch
+                        ChangeActivePlayer |> dispatch)
+                      ClassName "card-body card-title btn btn-dark w-100"
+                      Style [ Height "95%" ]
+                      Id "current-card-body"
+                      Disabled(model.CurrentCard.IsNone && model.Counter > 0) ]
                     [ span [ ClassName "h3" ]
                           [ str
                               (match model.CurrentCard with
