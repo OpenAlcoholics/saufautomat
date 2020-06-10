@@ -246,16 +246,19 @@ let update (msg: Msg) (model: Model) =
                 (List.filter (fun p -> p.Active || (Player.compareOption (model.CurrentPlayer) (Some p))) model.Players)
                 model
 
-        { model with
-              CurrentPlayer = nextPlayer
-              Players =
-                  List.map (fun player ->
-                      if (Player.compareOption (Some player) nextPlayer)
-                      then { player with CardsPlayed = player.CardsPlayed + 1 }
-                      else player) model.Players },
-        (if (roundHasEnded model)
-         then Cmd.ofSub (fun dispatch -> dispatch IncrementRound)
-         else Cmd.Empty)
+        (if model.Counter <> 0 then
+            { model with
+                  CurrentPlayer = nextPlayer
+                  Players =
+                      List.map (fun player ->
+                          if (Player.compareOption (Some player) nextPlayer)
+                          then { player with CardsPlayed = player.CardsPlayed + 1 }
+                          else player) model.Players }
+        else
+            model),
+            (if (roundHasEnded model)
+             then Cmd.ofSub (fun dispatch -> dispatch IncrementRound)
+             else Cmd.Empty)
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
     | AddCards cards ->
