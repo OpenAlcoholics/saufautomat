@@ -68,7 +68,8 @@ type Msg =
     | SaveSettings
     | ChangeRemoteSetting
     | Reset
-    | IncrementRound
+    | AdvanceTurn
+    | AdvanceRound
 
 let getCards dispatch =
     promise {
@@ -216,6 +217,11 @@ let update (msg: Msg) (model: Model) =
     match msg with
     | InitialLoad ->
         { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
+    | AdvanceTurn ->
+        model, Cmd.ofSub (fun dispatch -> do dispatch ChangeActiveCard
+                                             dispatch ChangeActivePlayer
+                                             dispatch IncrementCounter
+                                             if roundHasEnded model then dispatch AdvanceRound)
     | ChangeActiveCard ->
         let card = getNextCard model
 
@@ -235,9 +241,7 @@ let update (msg: Msg) (model: Model) =
 
         model,
         (if card.IsSome then
-            Cmd.ofSub (fun dispatch ->
-                do dispatch IncrementCounter
-                   (if (card.IsSome && card.Value.rounds <> 0) then AddActiveCard card.Value |> dispatch))
+            Cmd.ofSub (fun dispatch -> (if (card.IsSome && card.Value.rounds <> 0) then AddActiveCard card.Value |> dispatch))
          else
              Cmd.Empty)
     | ChangeActivePlayer ->
@@ -257,7 +261,7 @@ let update (msg: Msg) (model: Model) =
         else
             model),
             (if (roundHasEnded model)
-             then Cmd.ofSub (fun dispatch -> dispatch IncrementRound)
+             then Cmd.ofSub (fun dispatch -> dispatch AdvanceRound)
              else Cmd.Empty)
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
@@ -293,9 +297,7 @@ let update (msg: Msg) (model: Model) =
                   (List.map (fun p ->
                       if p = player then { p with Active = not p.Active } else p) model.Players) },
         (if (isCurrentPlayer player model) then
-            Cmd.ofSub (fun dispatch ->
-                do dispatch ChangeActivePlayer
-                   dispatch ChangeActiveCard)
+            Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
          else
              Cmd.Empty)
     | DisplayPlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = true }, Cmd.Empty
@@ -329,7 +331,7 @@ let update (msg: Msg) (model: Model) =
                         MinimumSips = min
                         MaximumSips = max } }, Cmd.Empty
     | Reset -> init ()
-    | IncrementRound ->
+    | AdvanceRound ->
         (if model.Players.Length > 0 then
             { model with
                   Round = model.Round + 1
@@ -468,9 +470,7 @@ let displayCurrentCard model dispatch =
                          then (sprintf "%d" model.CurrentCard.Value.id)
                          else "") ]
                 button
-                    [ OnClick(fun _ ->
-                        ChangeActiveCard |> dispatch
-                        ChangeActivePlayer |> dispatch)
+                    [ OnClick(fun _ -> dispatch AdvanceTurn)
                       ClassName "card-body card-title btn btn-dark w-100"
                       Style [ Height "95%" ]
                       Id "current-card-body"
