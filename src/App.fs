@@ -307,7 +307,7 @@ let update (msg: Msg) (model: Model) =
         { model with
               ActiveCards =
                   (List.filter (fun card -> card.rounds <> 0)
-                       (List.map (fun card -> { card with rounds = card.rounds - 1 }) model.ActiveCards)) }, Cmd.Empty
+                       (List.map (fun card -> { card with rounds = if card.rounds > 0 then card.rounds - 1 else card.rounds }) model.ActiveCards)) }, Cmd.Empty
     | DecrementPlayerUseCards -> model, Cmd.Empty // TODO
     | ChangeRemoteSetting ->
         let remote =
@@ -511,7 +511,7 @@ let displayActiveCard (card: RawCard) model dispatch =
     div
         [ ClassName "card p-2 m-1"
           Title card.text ]
-        [ h5 [ ClassName "card-title h-100" ] [ str (sprintf "%s (%d)" card.text card.rounds) ] ]
+        [ h5 [ ClassName "card-title h-100" ] [ str (card.text + (if card.rounds > 0 then (sprintf " (%d)" card.rounds) else "")) ] ]
 
 let activeCards (model: Model) dispatch =
     div
