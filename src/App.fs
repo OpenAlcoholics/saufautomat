@@ -64,7 +64,7 @@ type Msg =
     | DisplayPlayerNameDuplicate
     | HidePlayerNameDuplicate
     | DecrementActiveRoundCards
-    | DecrementPlayerUseCards
+    | UseActiveCard of RawCard * Player.Type
     | SaveSettings
     | ChangeRemoteSetting
     | Reset
@@ -243,7 +243,12 @@ let update (msg: Msg) (model: Model) =
 
         model,
         (if card.IsSome then
-            Cmd.ofSub (fun dispatch -> (if (card.IsSome && card.Value.rounds <> 0) then AddActiveCard (card.Value, (if card.Value.personal then model.CurrentPlayer else None)) |> dispatch))
+            Cmd.ofSub (fun dispatch ->
+                (if (card.IsSome && card.Value.rounds <> 0) then
+                    AddActiveCard
+                        (card.Value,
+                         (if card.Value.personal then model.CurrentPlayer else None))
+                    |> dispatch))
          else
              Cmd.Empty)
     | ChangeActivePlayer ->
@@ -260,11 +265,11 @@ let update (msg: Msg) (model: Model) =
                           if (Player.compareOption (Some player) nextPlayer)
                           then { player with CardsPlayed = player.CardsPlayed + 1 }
                           else player) model.Players }
-        else
-            model),
-            (if (roundHasEnded model)
-             then Cmd.ofSub (fun dispatch -> dispatch AdvanceRound)
-             else Cmd.Empty)
+         else
+             model),
+        (if (roundHasEnded model)
+         then Cmd.ofSub (fun dispatch -> dispatch AdvanceRound)
+         else Cmd.Empty)
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
     | AddCards cards ->
@@ -298,10 +303,9 @@ let update (msg: Msg) (model: Model) =
               Players =
                   (List.map (fun p ->
                       if p = player then { p with Active = not p.Active } else p) model.Players) },
-        (if (isCurrentPlayer player model) then
-            Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
-         else
-             Cmd.Empty)
+        (if (isCurrentPlayer player model)
+         then Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
+         else Cmd.Empty)
     | DisplayPlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = true }, Cmd.Empty
     | HidePlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = false }, Cmd.Empty
     | AddActiveCard (card, player) -> { model with ActiveCards = (card, player) :: model.ActiveCards }, Cmd.Empty
@@ -309,8 +313,20 @@ let update (msg: Msg) (model: Model) =
         { model with
               ActiveCards =
                   (List.filter (fun (card, _) -> card.rounds <> 0)
-                       (List.map (fun (card, player) -> { card with rounds = if card.rounds > 0 then card.rounds - 1 else card.rounds }, player) model.ActiveCards)) }, Cmd.Empty
-    | DecrementPlayerUseCards -> model, Cmd.Empty // TODO
+                       (List.map (fun (card, player) ->
+                           { card with
+                                 rounds =
+                                     if card.rounds > 0 && card.uses = 0 then card.rounds - 1 else card.rounds }, player)
+                            model.ActiveCards)) }, Cmd.Empty
+    | UseActiveCard (card, player) ->
+        { model with
+              ActiveCards =
+                  List.filter (fun (c, p) -> (c.rounds <> 0 || c.uses > 0) && not (card.uses = 1 && card.id = c.id && (Player.compareOption (Some player) p)))
+                      (List.map (fun (c, p) ->
+                          (if card.id = c.id && (Player.compareOption (Some player) p)
+                           then { c with uses = c.uses - 1 }
+                           else c), p) model.ActiveCards) },
+        Cmd.ofSub (fun dispatch -> AddActiveCard ({ card with uses = 0 }, (Some player)) |> dispatch)
     | ChangeRemoteSetting ->
         let remote =
             ((Browser.Dom.window.document.getElementById "remote") :?> Browser.Types.HTMLInputElement).``checked``
@@ -342,7 +358,8 @@ let update (msg: Msg) (model: Model) =
                         InitialPlayerIndex = unwrapOr (getPlayerIndex model.CurrentPlayer model.Players) -1 } }
          else
              model), Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
-    | RemoveActiveCard card -> { model with ActiveCards = List.filter (fun (c, _) -> card.id <> c.id) model.ActiveCards }, Cmd.Empty
+    | RemoveActiveCard card ->
+        { model with ActiveCards = List.filter (fun (c, _) -> card.id <> c.id) model.ActiveCards }, Cmd.Empty
 
 // VIEW (rendered with React)
 
@@ -510,13 +527,20 @@ let displayInformationHeader model dispatch =
                     AriaValueMin "0"
                     AriaValueMax(sprintf "%d" model.Cards.Length) ] [] ] ]
 
-let displayActiveCard (card, player) model dispatch =
+let displayActiveCard (card, player: Player.Type option) model dispatch =
     div
-        [ ClassName "card p-2 m-1"
+        [ ClassName ("card p-2 m-1" + (if Player.compareOption player model.CurrentPlayer then " border-success" else ""))
           Title card.text ]
-        [ h5 [ ClassName "card-title h-100" ] [ str (card.text + (if card.rounds > 0 then (sprintf " (%d)" card.rounds) else "")) ]
-          button [ ClassName "btn btn-primary"
-                   OnClick (fun _ -> RemoveActiveCard card |> dispatch) ] [ str "Delete" ] ]
+        [ h5 [ ClassName "card-title h-100" ]
+              [ str ((if player.IsSome then (sprintf "[%s] " player.Value.Name) else "") + card.text + (if card.rounds > 0 && card.uses = 0 then (sprintf " (%d)" card.rounds) else "")) ]
+          (if card.uses > 0 && player.IsSome then
+            button
+              [ ClassName "card-text btn btn-primary"
+                OnClick(fun _ -> UseActiveCard (card, player.Value) |> dispatch) ] [ str (sprintf "Use (%d)" card.uses) ]
+          else span [] [])
+          button
+              [ ClassName "btn btn-primary"
+                OnClick(fun _ -> RemoveActiveCard card |> dispatch) ] [ str "Delete" ] ]
 
 let activeCards (model: Model) dispatch =
     div
@@ -525,7 +549,7 @@ let activeCards (model: Model) dispatch =
               [ Height "22%"
                 OverflowY "scroll" ] ]
         [ div [ ClassName "col d-flex flex-wrap" ]
-              (List.map (fun card -> displayActiveCard card model dispatch) model.ActiveCards) ]
+              (List.map (fun card -> displayActiveCard card model dispatch) (List.rev (List.sortBy (fun (_, player) -> Player.compareOption model.CurrentPlayer player) model.ActiveCards))) ]
 
 let view (model: Model) dispatch =
     div
