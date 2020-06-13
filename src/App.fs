@@ -132,6 +132,8 @@ let unwrapOr (opt: 'b option) (def: 'b): 'b =
     | None -> def
 
 let rec findNextActivePlayer (playerList: Player.Type list) model =
+    let playerList = (List.filter (fun p -> p.Active || (Player.compareOption (model.CurrentPlayer) (Some p))) model.Players)
+
     if playerList.Length = 0 then
         None
     else if playerList.Length = 1 then
@@ -209,6 +211,10 @@ let getPlayerIndex (player: Player.Type option) (players: Player.Type list) =
     | Some p -> (List.tryFindIndex ((=) p) players)
     | None -> None
 
+let getPlayerByIndex index (players: Player.Type list) : Player.Type option =
+    try Some (players.Item index) with
+    | _ -> None
+
 let getActivePlayers model =
     List.filter (fun player -> player.Active) model.Players
 
@@ -258,9 +264,7 @@ let update (msg: Msg) (model: Model) =
              Cmd.Empty)
     | ChangeActivePlayer ->
         let nextPlayer =
-            findNextActivePlayer
-                (List.filter (fun p -> p.Active || (Player.compareOption (model.CurrentPlayer) (Some p))) model.Players)
-                model
+            findNextActivePlayer model.Players model
 
         (if model.Counter <> 0 then
             { model with
@@ -291,16 +295,16 @@ let update (msg: Msg) (model: Model) =
         | Some _ -> Cmd.Empty
         | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
     | RemovePlayer player ->
+        let isCurrent = (isCurrentPlayer player model)
+        let nextPlayer = if isCurrent then findNextActivePlayer model.Players model else model.CurrentPlayer
+        let players = (List.filter (fun p -> p <> player) model.Players)
+
         { model with
-              Players = (List.filter (fun p -> p <> player) model.Players)
-              RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - 1 }
-              CurrentPlayer =
-                  match model.CurrentPlayer with
-                  | Some currentPlayer ->
-                      if player = currentPlayer then None else model.CurrentPlayer
-                  | None -> None },
-        (if (isCurrentPlayer player model)
-         then Cmd.ofSub (fun dispatch -> dispatch ChangeActiveCard)
+              Players = players
+              CurrentPlayer = if players.Length = 0 then None else nextPlayer
+              RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - 1 } },
+        (if isCurrent
+         then Cmd.ofSub (fun dispatch -> do dispatch ChangeActiveCard)
          else Cmd.Empty)
     | TogglePlayerActivity player ->
 
@@ -445,9 +449,7 @@ let displayPlayer player model dispatch =
                           [ str (if player.Active then "Suspend" else "Unsuspend") ]
                       button
                           [ ClassName "card-text btn btn-secondary delete-button"
-                            OnClick(fun _ ->
-                                do RemovePlayer player |> dispatch
-                                   ChangeActivePlayer |> dispatch) ] [ str "Delete" ] ] ] ]
+                            OnClick(fun _ -> RemovePlayer player |> dispatch) ] [ str "Delete" ] ] ] ]
 
 let addPlayerFunction model dispatch =
     match ((Browser.Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value with
