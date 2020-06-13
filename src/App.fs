@@ -166,7 +166,7 @@ let filterCardsForTurn model =
                            else true) model.Cards
 
     List.filter (fun card ->
-        if card.unique
+        if card.unique && not card.personal // TODO: Handle #49 (Don't assign the same rule multiple times to one player)
         then (List.filter (fun (activeCard, _) -> card.unique && (activeCard.id = card.id)) model.ActiveCards).Length = 0
         else true) cards
 
