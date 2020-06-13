@@ -219,10 +219,18 @@ let update (msg: Msg) (model: Model) =
     | InitialLoad ->
         { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
     | AdvanceTurn ->
-        model, Cmd.ofSub (fun dispatch -> do dispatch ChangeActiveCard
-                                             dispatch ChangeActivePlayer
-                                             dispatch IncrementCounter
-                                             if roundHasEnded model then dispatch AdvanceRound)
+        let audioId =
+            (if roundHasEnded model then "nextround-audio" else "nextcard-audio")
+
+        stop audioId
+        play audioId
+
+        model,
+        Cmd.ofSub (fun dispatch ->
+            do dispatch ChangeActiveCard
+               dispatch ChangeActivePlayer
+               dispatch IncrementCounter
+               if roundHasEnded model then dispatch AdvanceRound)
     | ChangeActiveCard ->
         let card = getNextCard model
 
@@ -232,13 +240,6 @@ let update (msg: Msg) (model: Model) =
                   Cards = decreaseCardCount card model.Cards
                   RoundInformation =
                       { model.RoundInformation with CardsToPlay = max (model.RoundInformation.CardsToPlay - 1) 0 } }
-
-        let audioId =
-            (if roundHasEnded model then "nextround-audio" else "nextcard-audio")
-
-        if card.IsSome then
-            stop audioId
-            play audioId
 
         model,
         (if card.IsSome then
