@@ -489,12 +489,7 @@ let displayCurrentCard model dispatch =
         [ ClassName "card d-flex col"
           Id "active-card" ]
         [ div [ ClassName "card-body flex-wrap" ]
-              [ span []
-                    [ str
-                        (if model.CurrentCard.IsSome
-                         then (sprintf "%d" model.CurrentCard.Value.id)
-                         else "") ]
-                button
+              [ button
                     [ OnClick(fun _ -> dispatch AdvanceTurn)
                       ClassName "card-body card-title btn btn-dark w-100"
                       Style [ Height "95%" ]
