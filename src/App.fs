@@ -70,6 +70,7 @@ type Msg =
     | Reset
     | AdvanceTurn
     | AdvanceRound
+    | RemoveActiveCard of RawCard
 
 let getCards dispatch =
     promise {
@@ -340,6 +341,7 @@ let update (msg: Msg) (model: Model) =
                         InitialPlayerIndex = unwrapOr (getPlayerIndex model.CurrentPlayer model.Players) -1 } }
          else
              model), Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
+    | RemoveActiveCard card -> { model with ActiveCards = List.filter (fun c -> card.id <> c.id) model.ActiveCards }, Cmd.Empty
 
 // VIEW (rendered with React)
 
@@ -511,7 +513,9 @@ let displayActiveCard (card: RawCard) model dispatch =
     div
         [ ClassName "card p-2 m-1"
           Title card.text ]
-        [ h5 [ ClassName "card-title h-100" ] [ str (card.text + (if card.rounds > 0 then (sprintf " (%d)" card.rounds) else "")) ] ]
+        [ h5 [ ClassName "card-title h-100" ] [str (card.text + (if card.rounds > 0 then (sprintf " (%d)" card.rounds) else "")) ]
+          button [ ClassName "btn btn-primary"
+                   OnClick (fun _ -> RemoveActiveCard card |> dispatch) ] [ str "Delete" ] ]
 
 let activeCards (model: Model) dispatch =
     div
