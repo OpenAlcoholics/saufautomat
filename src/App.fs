@@ -40,7 +40,7 @@ type RoundInformation =
 
 type Model =
     { Players: Player.Type list
-      ActiveCards: RawCard list
+      ActiveCards: (RawCard * Player.Type option) list
       CurrentCard: RawCard option
       Cards: RawCard list
       CurrentPlayer: Player.Type option
@@ -56,7 +56,7 @@ type Msg =
     | ChangeActiveCard
     | ChangeActivePlayer
     | IncrementCounter
-    | AddActiveCard of RawCard
+    | AddActiveCard of RawCard * Player.Type option
     | AddCards of RawCard list
     | AddPlayer of Player.Type
     | RemovePlayer of Player.Type
@@ -166,7 +166,7 @@ let filterCardsForTurn model =
 
     List.filter (fun card ->
         if card.unique
-        then (List.filter (fun activeCard -> card.unique && (activeCard.id = card.id)) model.ActiveCards).Length = 0
+        then (List.filter (fun (activeCard, _) -> card.unique && (activeCard.id = card.id)) model.ActiveCards).Length = 0
         else true) cards
 
 let getNextCard model =
@@ -242,7 +242,7 @@ let update (msg: Msg) (model: Model) =
 
         model,
         (if card.IsSome then
-            Cmd.ofSub (fun dispatch -> (if (card.IsSome && card.Value.rounds <> 0) then AddActiveCard card.Value |> dispatch))
+            Cmd.ofSub (fun dispatch -> (if (card.IsSome && card.Value.rounds <> 0) then AddActiveCard (card.Value, (if card.Value.personal then model.CurrentPlayer else None)) |> dispatch))
          else
              Cmd.Empty)
     | ChangeActivePlayer ->
@@ -303,12 +303,12 @@ let update (msg: Msg) (model: Model) =
              Cmd.Empty)
     | DisplayPlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = true }, Cmd.Empty
     | HidePlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = false }, Cmd.Empty
-    | AddActiveCard card -> { model with ActiveCards = card :: model.ActiveCards }, Cmd.Empty
+    | AddActiveCard (card, player) -> { model with ActiveCards = (card, player) :: model.ActiveCards }, Cmd.Empty
     | DecrementActiveRoundCards ->
         { model with
               ActiveCards =
-                  (List.filter (fun card -> card.rounds <> 0)
-                       (List.map (fun card -> { card with rounds = if card.rounds > 0 then card.rounds - 1 else card.rounds }) model.ActiveCards)) }, Cmd.Empty
+                  (List.filter (fun (card, _) -> card.rounds <> 0)
+                       (List.map (fun (card, player) -> { card with rounds = if card.rounds > 0 then card.rounds - 1 else card.rounds }, player) model.ActiveCards)) }, Cmd.Empty
     | DecrementPlayerUseCards -> model, Cmd.Empty // TODO
     | ChangeRemoteSetting ->
         let remote =
@@ -341,7 +341,7 @@ let update (msg: Msg) (model: Model) =
                         InitialPlayerIndex = unwrapOr (getPlayerIndex model.CurrentPlayer model.Players) -1 } }
          else
              model), Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
-    | RemoveActiveCard card -> { model with ActiveCards = List.filter (fun c -> card.id <> c.id) model.ActiveCards }, Cmd.Empty
+    | RemoveActiveCard card -> { model with ActiveCards = List.filter (fun (c, _) -> card.id <> c.id) model.ActiveCards }, Cmd.Empty
 
 // VIEW (rendered with React)
 
@@ -509,7 +509,7 @@ let displayInformationHeader model dispatch =
                     AriaValueMin "0"
                     AriaValueMax(sprintf "%d" model.Cards.Length) ] [] ] ]
 
-let displayActiveCard (card: RawCard) model dispatch =
+let displayActiveCard (card, player) model dispatch =
     div
         [ ClassName "card p-2 m-1"
           Title card.text ]
