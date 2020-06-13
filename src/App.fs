@@ -513,7 +513,7 @@ let displayActiveCard (card: RawCard) model dispatch =
     div
         [ ClassName "card p-2 m-1"
           Title card.text ]
-        [ h5 [ ClassName "card-title h-100" ] [str (card.text + (if card.rounds > 0 then (sprintf " (%d)" card.rounds) else "")) ]
+        [ h5 [ ClassName "card-title h-100" ] [ str (card.text + (if card.rounds > 0 then (sprintf " (%d)" card.rounds) else "")) ]
           button [ ClassName "btn btn-primary"
                    OnClick (fun _ -> RemoveActiveCard card |> dispatch) ] [ str "Delete" ] ]
 
