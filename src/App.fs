@@ -222,7 +222,8 @@ let update (msg: Msg) (model: Model) =
         let audioId =
             (if roundHasEnded model then "nextround-audio" else "nextcard-audio")
 
-        stop audioId
+        stop "nextcard-audio"
+        stop "nextround-audio"
         play audioId
 
         model,
