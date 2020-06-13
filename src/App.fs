@@ -70,6 +70,7 @@ type Msg =
     | Reset
     | AdvanceTurn
     | AdvanceRound
+    | PlayAudio
     | RemoveActiveCard of RawCard
 
 let getCards dispatch =
@@ -219,6 +220,14 @@ let update (msg: Msg) (model: Model) =
     | InitialLoad ->
         { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
     | AdvanceTurn ->
+        model,
+        Cmd.ofSub (fun dispatch ->
+            do dispatch ChangeActiveCard
+               dispatch ChangeActivePlayer
+               dispatch IncrementCounter
+               dispatch PlayAudio
+               if roundHasEnded model then dispatch AdvanceRound)
+    | PlayAudio ->
         let audioId =
             (if roundHasEnded model then "nextround-audio" else "nextcard-audio")
 
@@ -226,12 +235,7 @@ let update (msg: Msg) (model: Model) =
         stop "nextround-audio"
         play audioId
 
-        model,
-        Cmd.ofSub (fun dispatch ->
-            do dispatch ChangeActiveCard
-               dispatch ChangeActivePlayer
-               dispatch IncrementCounter
-               if roundHasEnded model then dispatch AdvanceRound)
+        model, Cmd.Empty
     | ChangeActiveCard ->
         let card = getNextCard model
 
