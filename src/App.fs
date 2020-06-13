@@ -512,12 +512,8 @@ let displayInformationHeader model dispatch =
                    | Some player -> player.Name
                    | None -> "No active player") ]
           span [] [ str " | " ]
-          span [ Title "Number of cards played so far" ] [ str (sprintf "%d" model.Counter) ]
-          span [] [ str " / " ]
-          span [ Title "Total number of cards" ] [ str (sprintf "%d " model.Cards.Length) ]
-          span [] [ str " " ]
-          span [ Title "Distinct number of cards" ] [ str (sprintf "(%d)" (getDistinctCardCount model.Cards)) ]
-          span [] [ str (sprintf " | Runde %d" model.Round) ]
+          span [ Title "Number of cards played so far" ] [ str (sprintf "Cards played %d" model.Counter) ]
+          span [] [ str (sprintf " | Round %d" model.Round) ]
           div [ ClassName "progress" ]
               [ div
                   [ ClassName "progress-bar"
