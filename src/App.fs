@@ -300,10 +300,12 @@ let update (msg: Msg) (model: Model) =
         let isCurrent = (isCurrentPlayer player model)
         let nextPlayer = if isCurrent then findNextActivePlayer model.Players model else model.CurrentPlayer
         let players = (List.filter (fun p -> p <> player) model.Players)
+        let activeCards = List.filter (fun (card, p) -> not (Player.compareOption p (Some player))) model.ActiveCards
 
         { model with
               Players = players
               CurrentPlayer = if players.Length = 0 then None else nextPlayer
+              ActiveCards = activeCards
               RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - 1 } },
         (if isCurrent
          then Cmd.ofSub (fun dispatch -> do dispatch ChangeActiveCard)
