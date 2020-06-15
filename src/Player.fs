@@ -21,3 +21,6 @@ let create name =
 
 let compareOption (player1: Type option) (player2: Type option) : bool =
     if player1.IsSome && player2.IsSome then player1.Value.Name = player2.Value.Name else false
+
+let filterActiveCards player cards =
+    List.map (fun (c, _) -> c) (List.filter (fun (_, p) -> compareOption (Some player) p) cards)

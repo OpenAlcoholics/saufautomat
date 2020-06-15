@@ -154,8 +154,8 @@ let rec findNextActivePlayer (playerList: Player.Type list) model =
 
 let int_replacement_regex = new Regex("{int(:?:(\d+)-(\d+))?}")
 
-let filterCardsForTurn model =
-    let distinctCount = (getDistinctCardCount model.Cards)
+let filterCardsForTurn cards model =
+    let distinctCount = (getDistinctCardCount cards)
 
     let cards =
         List.filter (fun card ->
@@ -165,15 +165,15 @@ let filterCardsForTurn model =
                else
                    true && if distinctCount > 1 // TODO: this should be checked after everything else
                            then card.id <> (unwrapOrMap model.CurrentCard (fun c -> c.id) -1)
-                           else true) model.Cards
+                           else true) cards
 
     List.filter (fun card ->
         if card.unique && not card.personal // TODO: Handle #49 (Don't assign the same rule multiple times to one player)
         then (List.filter (fun (activeCard, _) -> card.unique && (activeCard.id = card.id)) model.ActiveCards).Length = 0
         else true) cards
 
-let getNextCard model =
-    let cards = filterCardsForTurn model
+let getNextCard cards model =
+    let cards = filterCardsForTurn cards model
     if cards.Length = 0 then
         None
     else
@@ -228,8 +228,8 @@ let update (msg: Msg) (model: Model) =
     | AdvanceTurn ->
         model,
         Cmd.ofSub (fun dispatch ->
-            do dispatch ChangeActiveCard
-               dispatch ChangeActivePlayer
+            do dispatch ChangeActivePlayer
+               dispatch ChangeActiveCard
                dispatch IncrementCounter
                dispatch PlayAudio
                if roundHasEnded model then dispatch AdvanceRound)
@@ -243,7 +243,9 @@ let update (msg: Msg) (model: Model) =
 
         model, Cmd.Empty
     | ChangeActiveCard ->
-        let card = getNextCard model
+        let playerCards = Player.filterActiveCards (model.CurrentPlayer.Value) (model.ActiveCards)
+        let cards = if model.CurrentPlayer.IsSome then List.filter (fun card -> not (List.exists (fun c -> c.id = card.id) playerCards)) model.Cards else model.Cards
+        let card = getNextCard cards model
 
         let model =
             { model with
