@@ -64,6 +64,7 @@ type Msg =
     | DisplayPlayerNameDuplicate
     | HidePlayerNameDuplicate
     | DecrementActiveRoundCards
+    | DecrementPlayerRoundCards
     | UseActiveCard of RawCard * Player.Type
     | SaveSettings
     | ChangeRemoteSetting
@@ -132,8 +133,6 @@ let unwrapOr (opt: 'b option) (def: 'b): 'b =
     | None -> def
 
 let rec findNextActivePlayer (playerList: Player.Type list) model =
-    let playerList = (List.filter (fun p -> p.Active || (Player.compareOption (model.CurrentPlayer) (Some p))) model.Players)
-
     if playerList.Length = 0 then
         None
     else if playerList.Length = 1 then
@@ -211,9 +210,10 @@ let getPlayerIndex (player: Player.Type option) (players: Player.Type list) =
     | Some p -> (List.tryFindIndex ((=) p) players)
     | None -> None
 
-let getPlayerByIndex index (players: Player.Type list) : Player.Type option =
-    try Some (players.Item index) with
-    | _ -> None
+let getPlayerByIndex index (players: Player.Type list): Player.Type option =
+    try
+        Some(players.Item index)
+    with _ -> None
 
 let getActivePlayers model =
     List.filter (fun player -> player.Active) model.Players
@@ -228,10 +228,11 @@ let update (msg: Msg) (model: Model) =
     | AdvanceTurn ->
         model,
         Cmd.ofSub (fun dispatch ->
-            do dispatch ChangeActivePlayer
+            do dispatch IncrementCounter
+               dispatch ChangeActivePlayer
                dispatch ChangeActiveCard
-               dispatch IncrementCounter
                dispatch PlayAudio
+               dispatch DecrementPlayerRoundCards
                if roundHasEnded model then dispatch AdvanceRound)
     | PlayAudio ->
         let audioId =
@@ -244,7 +245,12 @@ let update (msg: Msg) (model: Model) =
         model, Cmd.Empty
     | ChangeActiveCard ->
         let playerCards = Player.filterActiveCards (model.CurrentPlayer.Value) (model.ActiveCards)
-        let cards = if model.CurrentPlayer.IsSome then List.filter (fun card -> not (List.exists (fun c -> c.id = card.id) playerCards)) model.Cards else model.Cards
+
+        let cards =
+            if model.CurrentPlayer.IsSome
+            then List.filter (fun card -> not (List.exists (fun c -> c.id = card.id) playerCards)) model.Cards
+            else model.Cards
+
         let card = getNextCard cards model
 
         let model =
@@ -266,7 +272,9 @@ let update (msg: Msg) (model: Model) =
              Cmd.Empty)
     | ChangeActivePlayer ->
         let nextPlayer =
-            findNextActivePlayer model.Players model
+            findNextActivePlayer
+                ((List.filter (fun p -> p.Active || (Player.compareOption (model.CurrentPlayer) (Some p)))
+                      model.Players)) model
 
         (if model.Counter <> 0 then
             { model with
@@ -277,10 +285,7 @@ let update (msg: Msg) (model: Model) =
                           then { player with CardsPlayed = player.CardsPlayed + 1 }
                           else player) model.Players }
          else
-             model),
-        (if (roundHasEnded model)
-         then Cmd.ofSub (fun dispatch -> dispatch AdvanceRound)
-         else Cmd.Empty)
+             model), Cmd.Empty
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
     | AddCards cards ->
@@ -298,18 +303,21 @@ let update (msg: Msg) (model: Model) =
         | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
     | RemovePlayer player ->
         let isCurrent = (isCurrentPlayer player model)
-        let nextPlayer = if isCurrent then findNextActivePlayer model.Players model else model.CurrentPlayer
+
         let players = (List.filter (fun p -> p <> player) model.Players)
-        let activeCards = List.filter (fun (card, p) -> not (Player.compareOption p (Some player))) model.ActiveCards
+        let activeCards =
+            List.filter (fun (card, p) -> not (Player.compareOption p (Some player))) model.ActiveCards
 
         { model with
               Players = players
-              CurrentPlayer = if players.Length = 0 then None else nextPlayer
               ActiveCards = activeCards
               RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - 1 } },
-        (if isCurrent
-         then Cmd.ofSub (fun dispatch -> do dispatch ChangeActiveCard)
-         else Cmd.Empty)
+        (if isCurrent then
+            Cmd.ofSub (fun dispatch ->
+                do dispatch ChangeActivePlayer
+                   dispatch ChangeActiveCard)
+         else
+             Cmd.Empty)
     | TogglePlayerActivity player ->
 
         { model with
@@ -326,20 +334,31 @@ let update (msg: Msg) (model: Model) =
         { model with
               ActiveCards =
                   (List.filter (fun (card, _) -> card.rounds <> 0)
-                       (List.map (fun (card, player) ->
+                       (List.map (fun (card, player: Player.Type option) ->
                            { card with
                                  rounds =
-                                     if card.rounds > 0 && card.uses = 0 then card.rounds - 1 else card.rounds }, player)
-                            model.ActiveCards)) }, Cmd.Empty
+                                     if card.rounds > 0 && card.uses = 0 && player.IsNone
+                                     then card.rounds - 1
+                                     else card.rounds }, player) model.ActiveCards)) }, Cmd.Empty
+    | DecrementPlayerRoundCards ->
+        { model with
+              ActiveCards =
+                  List.filter (fun (c, p) -> (c.rounds <> 0 || c.uses > 0))
+                      (List.map (fun (c, p) ->
+                          (if Player.compareOption model.CurrentPlayer p
+                           then { c with rounds = c.rounds - 1 }
+                           else c), p) model.ActiveCards) }, Cmd.Empty
     | UseActiveCard (card, player) ->
         { model with
               ActiveCards =
-                  List.filter (fun (c, p) -> (c.rounds <> 0 || c.uses > 0) && not (card.uses = 1 && card.id = c.id && (Player.compareOption (Some player) p)))
+                  List.filter (fun (c, p) ->
+                      (c.rounds <> 0 || c.uses > 0)
+                      && not (card.uses = 1 && card.id = c.id && (Player.compareOption (Some player) p)))
                       (List.map (fun (c, p) ->
                           (if card.id = c.id && (Player.compareOption (Some player) p)
                            then { c with uses = c.uses - 1 }
                            else c), p) model.ActiveCards) },
-        Cmd.ofSub (fun dispatch -> AddActiveCard ({ card with uses = 0 }, (Some player)) |> dispatch)
+        Cmd.ofSub (fun dispatch -> AddActiveCard({ card with uses = 0 }, (Some player)) |> dispatch)
     | ChangeRemoteSetting ->
         let remote =
             ((Browser.Dom.window.document.getElementById "remote") :?> Browser.Types.HTMLInputElement).``checked``
@@ -363,12 +382,15 @@ let update (msg: Msg) (model: Model) =
                         MaximumSips = max } }, Cmd.Empty
     | Reset -> init ()
     | AdvanceRound ->
+        JS.console.log (getActivePlayers model)
+        JS.console.log (getActivePlayers model).Length
+
         (if model.Players.Length > 0 then
             { model with
                   Round = model.Round + 1
                   RoundInformation =
-                      { CardsToPlay = (getActivePlayers model).Length
-                        InitialPlayerIndex = unwrapOr (getPlayerIndex model.CurrentPlayer model.Players) -1 } }
+                      { CardsToPlay = (getActivePlayers model).Length - 1
+                        InitialPlayerIndex = (unwrapOr (getPlayerIndex model.CurrentPlayer model.Players) 0) - 1 } }
          else
              model), Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
     | RemoveActiveCard card ->
@@ -496,11 +518,11 @@ let displayCurrentCard model dispatch =
           Id "active-card" ]
         [ div [ ClassName "card-body flex-wrap" ]
               [ button
-                    [ OnClick(fun _ -> dispatch AdvanceTurn)
-                      ClassName "card-body card-title btn btn-dark w-100"
-                      Style [ Height "95%" ]
-                      Id "current-card-body"
-                      Disabled(model.CurrentCard.IsNone && model.Counter > 0) ]
+                  [ OnClick(fun _ -> dispatch AdvanceTurn)
+                    ClassName "card-body card-title btn btn-dark w-100"
+                    Style [ Height "95%" ]
+                    Id "current-card-body"
+                    Disabled(model.CurrentCard.IsNone && model.Counter > 0) ]
                     [ span [ ClassName "h3" ]
                           [ str
                               (match model.CurrentCard with
@@ -531,15 +553,22 @@ let displayInformationHeader model dispatch =
 
 let displayActiveCard (card, player: Player.Type option) model dispatch =
     div
-        [ ClassName ("card p-2 m-1" + (if Player.compareOption player model.CurrentPlayer then " border-success" else ""))
+        [ ClassName
+            ("card p-2 m-1" + (if Player.compareOption player model.CurrentPlayer
+                               then " border-success"
+                               else ""))
           Title card.text ]
         [ h5 [ ClassName "card-title h-100" ]
-              [ str ((if player.IsSome then (sprintf "[%s] " player.Value.Name) else "") + card.text + (if card.rounds > 0 && card.uses = 0 then (sprintf " (%d)" card.rounds) else "")) ]
+              [ str
+                  ((if player.IsSome then (sprintf "[%s] " player.Value.Name) else "") + card.text
+                   + (if card.rounds > 0 && card.uses = 0 then (sprintf " (%d)" card.rounds) else "")) ]
           (if card.uses > 0 && player.IsSome then
-            button
-              [ ClassName "card-text btn btn-primary"
-                OnClick(fun _ -> UseActiveCard (card, player.Value) |> dispatch) ] [ str (sprintf "Use (%d)" card.uses) ]
-          else span [] [])
+              button
+                  [ ClassName "card-text btn btn-primary"
+                    OnClick(fun _ -> UseActiveCard(card, player.Value) |> dispatch) ]
+                  [ str (sprintf "Use (%d)" card.uses) ]
+           else
+               span [] [])
           button
               [ ClassName "btn btn-primary"
                 OnClick(fun _ -> RemoveActiveCard card |> dispatch) ] [ str "Delete" ] ]
@@ -551,7 +580,10 @@ let activeCards (model: Model) dispatch =
               [ Height "22%"
                 OverflowY "scroll" ] ]
         [ div [ ClassName "col d-flex flex-wrap" ]
-              (List.map (fun card -> displayActiveCard card model dispatch) (List.rev (List.sortBy (fun (_, player) -> Player.compareOption model.CurrentPlayer player) model.ActiveCards))) ]
+              (List.map (fun card -> displayActiveCard card model dispatch)
+                   (List.rev
+                       (List.sortBy (fun (_, player) -> Player.compareOption model.CurrentPlayer player)
+                            model.ActiveCards))) ]
 
 let view (model: Model) dispatch =
     div
