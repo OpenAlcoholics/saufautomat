@@ -314,8 +314,7 @@ let update (msg: Msg) (model: Model) =
               RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - 1 } },
         (if isCurrent then
             Cmd.ofSub (fun dispatch ->
-                do dispatch ChangeActivePlayer
-                   dispatch ChangeActiveCard)
+                do AdvanceTurn)
          else
              Cmd.Empty)
     | TogglePlayerActivity player ->
