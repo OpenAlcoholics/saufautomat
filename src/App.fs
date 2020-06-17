@@ -206,9 +206,6 @@ let getPlayerByIndex index (players: Player.Type list): Player.Type option =
         Some(players.Item index)
     with _ -> None
 
-let getActivePlayers model =
-    List.filter (fun player -> player.Active) model.Players
-
 let isCurrentPlayer player model =
     Player.compareOption (Some player) model.CurrentPlayer
 
@@ -376,7 +373,7 @@ let update (msg: Msg) (model: Model) =
             { model with
                   Round = model.Round + 1
                   RoundInformation =
-                      { CardsToPlay = (getActivePlayers model).Length - 1
+                      { CardsToPlay = (getActivePlayers model.Players).Length - 1
                         InitialPlayerIndex = (unwrapOr (getPlayerIndex model.CurrentPlayer model.Players) 0) - 1 } }
          else
              model), Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
