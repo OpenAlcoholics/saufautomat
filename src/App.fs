@@ -372,9 +372,6 @@ let update (msg: Msg) (model: Model) =
                         MaximumSips = max } }, Cmd.Empty
     | Reset -> init ()
     | AdvanceRound ->
-        JS.console.log (getActivePlayers model)
-        JS.console.log (getActivePlayers model).Length
-
         (if model.Players.Length > 0 then
             { model with
                   Round = model.Round + 1
