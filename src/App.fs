@@ -259,22 +259,18 @@ let update (msg: Msg) (model: Model) =
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
     | AddCards cards ->
-        let cards = List.map Card.Into cards
-        { model with Cards = (explodeCards cards) }, Cmd.Empty
+        { model with Cards = explodeCards (List.map Card.Into cards) }, Cmd.Empty
     | AddPlayer player ->
         { model with
               Players = model.Players @ [ player ]
               RoundInformation =
                   { model.RoundInformation with
                         CardsToPlay =
-                            model.RoundInformation.CardsToPlay
-                            + 1 (*TODO: should this only be executed when the added player has a turn in this round?*)  } },
+                            model.RoundInformation.CardsToPlay + 1 } },
         match model.CurrentPlayer with
         | Some _ -> Cmd.Empty
         | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
     | RemovePlayer player ->
-        let isCurrent = (Player.isCurrent player model.CurrentPlayer)
-
         let players = (List.filter (fun p -> p <> player) model.Players)
         let activeCards =
             List.filter (fun (card, p) -> not (Player.compareOption p (Some player))) model.ActiveCards
@@ -283,7 +279,7 @@ let update (msg: Msg) (model: Model) =
               Players = players
               ActiveCards = activeCards
               RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - 1 } },
-        (if isCurrent
+        (if (Player.isCurrent player model.CurrentPlayer)
          then Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
          else Cmd.Empty)
     | TogglePlayerActivity player ->
