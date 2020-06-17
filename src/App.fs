@@ -112,10 +112,7 @@ let init (): Model * Cmd<Msg> =
           { CardsToPlay = 0
             InitialPlayerIndex = -1 } }, Cmd.Empty
 
-let getDistinctCardCount cards =
-    (List.map (fun c -> c.Id) cards |> List.distinct).Length
-
-let unwrapOrMap (opt: 'b option) (m: 'b -> 't) (def: 't) =
+let unwrapMapOrDefault (opt: 'b option) (m: 'b -> 't) (def: 't) =
     if opt.IsSome then m opt.Value else def
 
 let unwrapOr (opt: 'b option) (def: 'b): 'b =
@@ -145,7 +142,7 @@ let rec findNextActivePlayer (playerList: Player.Type list) model =
 let int_replacement_regex = new Regex("{int(:?:(\d+)-(\d+))?}")
 
 let filterCardsForTurn cards model =
-    let distinctCount = (getDistinctCardCount cards)
+    let distinctCount = (Card.getDistinctCount cards)
 
     let cards =
         List.filter (fun card ->
@@ -154,7 +151,7 @@ let filterCardsForTurn cards model =
                 (not card.Personal) && card.Rounds = 0
                else
                    true && if distinctCount > 1 // TODO: this should be checked after everything else
-                           then card.Id <> (unwrapOrMap model.CurrentCard (fun c -> c.Id) -1)
+                           then card.Id <> (unwrapMapOrDefault model.CurrentCard (fun c -> c.Id) -1)
                            else true) cards
 
     List.filter (fun card ->
@@ -181,13 +178,6 @@ let getNextCard cards model =
             |> String.concat " "
         Some { card with Text = replacement_text }
 
-let decreaseCardCount card cards =
-    match card with
-    | Some card ->
-        List.map (fun c ->
-            if c = card then { c with Count = c.Count - 1 } else c) cards
-    | None -> cards
-
 let explodeCards cards =
     (List.map (fun card -> ([ card ] |> Seq.collect (fun c -> List.replicate c.Count { c with Count = 1 }))) cards)
     |> Seq.reduce Seq.append
@@ -196,18 +186,10 @@ let explodeCards cards =
 let roundHasEnded model =
     model.RoundInformation.CardsToPlay <= 0 && model.Players.Length > 0
 
-let getPlayerIndex (player: Player.Type option) (players: Player.Type list) =
-    match player with
-    | Some p -> (List.tryFindIndex ((=) p) players)
-    | None -> None
-
 let getPlayerByIndex index (players: Player.Type list): Player.Type option =
     try
         Some(players.Item index)
     with _ -> None
-
-let isCurrentPlayer player model =
-    Player.compareOption (Some player) model.CurrentPlayer
 
 let update (msg: Msg) (model: Model) =
     match msg with
@@ -244,7 +226,7 @@ let update (msg: Msg) (model: Model) =
         let model =
             { model with
                   CurrentCard = card
-                  Cards = decreaseCardCount card model.Cards
+                  Cards = Card.decreaseCount card model.Cards
                   RoundInformation =
                       { model.RoundInformation with CardsToPlay = max (model.RoundInformation.CardsToPlay - 1) 0 } }
 
@@ -291,7 +273,7 @@ let update (msg: Msg) (model: Model) =
         | Some _ -> Cmd.Empty
         | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
     | RemovePlayer player ->
-        let isCurrent = (isCurrentPlayer player model)
+        let isCurrent = (Player.isCurrent player model.CurrentPlayer)
 
         let players = (List.filter (fun p -> p <> player) model.Players)
         let activeCards =
@@ -301,17 +283,16 @@ let update (msg: Msg) (model: Model) =
               Players = players
               ActiveCards = activeCards
               RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - 1 } },
-        (if isCurrent then
-            Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
-         else
-             Cmd.Empty)
+        (if isCurrent
+         then Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
+         else Cmd.Empty)
     | TogglePlayerActivity player ->
 
         { model with
               Players =
                   (List.map (fun p ->
                       if p = player then { p with Active = not p.Active } else p) model.Players) },
-        (if (isCurrentPlayer player model)
+        (if (Player.isCurrent player model.CurrentPlayer)
          then Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
          else Cmd.Empty)
     | DisplayPlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = true }, Cmd.Empty
@@ -373,8 +354,8 @@ let update (msg: Msg) (model: Model) =
             { model with
                   Round = model.Round + 1
                   RoundInformation =
-                      { CardsToPlay = (getActivePlayers model.Players).Length - 1
-                        InitialPlayerIndex = (unwrapOr (getPlayerIndex model.CurrentPlayer model.Players) 0) - 1 } }
+                      { CardsToPlay = (Player.getActive model.Players).Length - 1
+                        InitialPlayerIndex = (unwrapOr (Player.getIndex model.CurrentPlayer model.Players) 0) - 1 } }
          else
              model), Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
     | RemoveActiveCard card ->
@@ -433,14 +414,23 @@ let settings model dispatch =
                                   OnClick(fun _ -> dispatch SaveSettings) ] [ str "Save" ] ] ] ] ]
 
 let addPlayer name model dispatch =
-    dispatch (AddPlayer(Player.create name))
-    HidePlayerNameDuplicate |> ignore
-    true
-
-let tryAddPlayer name model dispatch =
     match List.tryFind ((=) (Player.create name)) model.Players with
     | Some _ -> false
-    | None -> addPlayer name model dispatch
+    | None ->
+        dispatch (AddPlayer(Player.create name))
+        HidePlayerNameDuplicate |> ignore
+        true
+
+let addPlayerFunction model dispatch =
+    match ((Browser.Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value with
+    | "" -> ()
+    | value ->
+        (match (addPlayer value model dispatch) with
+         | true ->
+             ((Browser.Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value <- ""
+         | false ->
+             DisplayPlayerNameDuplicate
+             |> dispatch)
 
 let displayPlayer player model dispatch =
     div
@@ -460,21 +450,6 @@ let displayPlayer player model dispatch =
                       button
                           [ ClassName "card btn btn-secondary delete-button"
                             OnClick(fun _ -> RemovePlayer player |> dispatch) ] [ str "Delete" ] ] ] ]
-
-let addPlayerFunction model dispatch =
-    match ((Browser.Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value with
-    | "" -> ()
-    | value ->
-        (match (tryAddPlayer value model dispatch) with
-         | true ->
-             (do (((Browser.Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value <- "")
-                 HidePlayerNameDuplicate |> dispatch)
-             |> ignore
-         | false ->
-             DisplayPlayerNameDuplicate
-             |> dispatch
-             |> ignore)
-        |> ignore
 
 let sidebar (model: Model) dispatch =
     div [ ClassName "col-md-2 sidebar col h-100" ]
