@@ -380,7 +380,9 @@ let settings model dispatch =
                                               ClassName "m-1 w-100 col"
                                               Id "minimum-sips"
                                               Placeholder(sprintf "%d" (model.Settings.MinimumSips))
-                                              MaxLength 2. ] ]
+                                              MaxLength 2.
+                                              InputType "text"
+                                              Pattern "\d{1,2}" ] ]
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "maximum-sips"
@@ -390,7 +392,9 @@ let settings model dispatch =
                                               ClassName "m-1 w-100 col"
                                               Id "maximum-sips"
                                               Placeholder(sprintf "%d" (model.Settings.MaximumSips))
-                                              MaxLength 2. ] ]
+                                              MaxLength 2.
+                                              InputType "text"
+                                              Pattern "\d{1,2}" ] ]
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "remote"
