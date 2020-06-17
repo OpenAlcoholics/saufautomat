@@ -31,9 +31,9 @@ type RoundInformation =
 
 type Model =
     { Players: Player.Type list
-      ActiveCards: (Card.RawType * Player.Type option) list
-      CurrentCard: Card.RawType option
-      Cards: Card.RawType list
+      ActiveCards: (Card.Type * Player.Type option) list
+      CurrentCard: Card.Type option
+      Cards: Card.Type list
       CurrentPlayer: Player.Type option
       Counter: int
       DisplayPlayerNameDuplicateError: bool
@@ -47,7 +47,7 @@ type Msg =
     | ChangeActiveCard
     | ChangeActivePlayer
     | IncrementCounter
-    | AddActiveCard of Card.RawType * Player.Type option
+    | AddActiveCard of Card.Type * Player.Type option
     | AddCards of Card.RawType list
     | AddPlayer of Player.Type
     | RemovePlayer of Player.Type
@@ -56,14 +56,14 @@ type Msg =
     | HidePlayerNameDuplicate
     | DecrementActiveRoundCards
     | DecrementPlayerRoundCards
-    | UseActiveCard of Card.RawType * Player.Type
+    | UseActiveCard of Card.Type * Player.Type
     | SaveSettings
     | ChangeRemoteSetting
     | Reset
     | AdvanceTurn
     | AdvanceRound
     | PlayAudio
-    | RemoveActiveCard of Card.RawType
+    | RemoveActiveCard of Card.Type
 
 let getCards dispatch =
     promise {
@@ -113,7 +113,7 @@ let init (): Model * Cmd<Msg> =
             InitialPlayerIndex = -1 } }, Cmd.Empty
 
 let getDistinctCardCount cards =
-    (List.map (fun c -> c.id) cards |> List.distinct).Length
+    (List.map (fun c -> c.Id) cards |> List.distinct).Length
 
 let unwrapOrMap (opt: 'b option) (m: 'b -> 't) (def: 't) =
     if opt.IsSome then m opt.Value else def
@@ -149,17 +149,17 @@ let filterCardsForTurn cards model =
 
     let cards =
         List.filter (fun card ->
-            card.count > 0 && ((model.Settings.Remote && card.remote) || (not model.Settings.Remote))
+            card.Count > 0 && ((model.Settings.Remote && card.Remote) || (not model.Settings.Remote))
             && if model.Players.Length = 0 then
-                (not card.personal) && card.rounds = 0
+                (not card.Personal) && card.Rounds = 0
                else
                    true && if distinctCount > 1 // TODO: this should be checked after everything else
-                           then card.id <> (unwrapOrMap model.CurrentCard (fun c -> c.id) -1)
+                           then card.Id <> (unwrapOrMap model.CurrentCard (fun c -> c.Id) -1)
                            else true) cards
 
     List.filter (fun card ->
-        if card.unique && not card.personal // TODO: Handle #49 (Don't assign the same rule multiple times to one player)
-        then (List.filter (fun (activeCard, _) -> card.unique && (activeCard.id = card.id)) model.ActiveCards).Length = 0
+        if card.Unique && not card.Personal // TODO: Handle #49 (Don't assign the same rule multiple times to one player)
+        then (List.filter (fun (activeCard, _) -> card.Unique && (activeCard = card)) model.ActiveCards).Length = 0
         else true) cards
 
 let getNextCard cards model =
@@ -177,19 +177,19 @@ let getNextCard cards model =
                 let m = int_replacement_regex.Match w
                 match m.Success with
                 | true -> (sprintf "%d" ((System.Random().Next()) % (max - min + 1) + min))
-                | false -> w) (card.text.Split ' '))
+                | false -> w) (card.Text.Split ' '))
             |> String.concat " "
-        Some { card with text = replacement_text }
+        Some { card with Text = replacement_text }
 
 let decreaseCardCount card cards =
     match card with
     | Some card ->
         List.map (fun c ->
-            if c.id = card.id then { c with count = c.count - 1 } else c) cards
+            if c = card then { c with Count = c.Count - 1 } else c) cards
     | None -> cards
 
 let explodeCards cards =
-    (List.map (fun card -> ([ card ] |> Seq.collect (fun c -> List.replicate c.count { c with count = 1 }))) cards)
+    (List.map (fun card -> ([ card ] |> Seq.collect (fun c -> List.replicate c.Count { c with Count = 1 }))) cards)
     |> Seq.reduce Seq.append
     |> List.ofSeq
 
@@ -239,7 +239,7 @@ let update (msg: Msg) (model: Model) =
 
         let cards =
             if model.CurrentPlayer.IsSome
-            then List.filter (fun card -> not (List.exists (fun c -> c.id = card.id) playerCards)) model.Cards
+            then List.filter (fun card -> not (List.exists (fun c -> c = card) playerCards)) model.Cards
             else model.Cards
 
         let card = getNextCard cards model
@@ -254,10 +254,10 @@ let update (msg: Msg) (model: Model) =
         model,
         (if card.IsSome then
             Cmd.ofSub (fun dispatch ->
-                (if (card.IsSome && card.Value.rounds <> 0) then
+                (if (card.IsSome && card.Value.Rounds <> 0) then
                     AddActiveCard
                         (card.Value,
-                         (if card.Value.personal then model.CurrentPlayer else None))
+                         (if card.Value.Personal then model.CurrentPlayer else None))
                     |> dispatch))
          else
              Cmd.Empty)
@@ -280,6 +280,7 @@ let update (msg: Msg) (model: Model) =
     | IncrementCounter ->
         { model with Counter = model.Counter + 1 }, Cmd.Empty
     | AddCards cards ->
+        let cards = List.map Card.Into cards
         { model with Cards = (explodeCards cards) }, Cmd.Empty
     | AddPlayer player ->
         { model with
@@ -322,32 +323,32 @@ let update (msg: Msg) (model: Model) =
     | DecrementActiveRoundCards ->
         { model with
               ActiveCards =
-                  (List.filter (fun (card, _) -> card.rounds <> 0)
+                  (List.filter (fun (card, _) -> card.Rounds <> 0)
                        (List.map (fun (card, player: Player.Type option) ->
                            { card with
-                                 rounds =
-                                     if card.rounds > 0 && card.uses = 0 && player.IsNone
-                                     then card.rounds - 1
-                                     else card.rounds }, player) model.ActiveCards)) }, Cmd.Empty
+                                 Rounds =
+                                     if card.Rounds > 0 && card.Uses = 0 && player.IsNone
+                                     then card.Rounds - 1
+                                     else card.Rounds }, player) model.ActiveCards)) }, Cmd.Empty
     | DecrementPlayerRoundCards ->
         { model with
               ActiveCards =
-                  List.filter (fun (c, p) -> (c.rounds <> 0 || c.uses > 0))
+                  List.filter (fun (c, p) -> (c.Rounds <> 0 || c.Uses > 0))
                       (List.map (fun (c, p) ->
                           (if Player.compareOption model.CurrentPlayer p
-                           then { c with rounds = c.rounds - 1 }
+                           then { c with Rounds = c.Rounds - 1 }
                            else c), p) model.ActiveCards) }, Cmd.Empty
     | UseActiveCard (card, player) ->
         { model with
               ActiveCards =
                   List.filter (fun (c, p) ->
-                      (c.rounds <> 0 || c.uses > 0)
-                      && not (card.uses = 1 && card.id = c.id && (Player.compareOption (Some player) p)))
+                      (c.Rounds <> 0 || c.Uses > 0)
+                      && not (card.Uses = 1 && card = c && (Player.compareOption (Some player) p)))
                       (List.map (fun (c, p) ->
-                          (if card.id = c.id && (Player.compareOption (Some player) p)
-                           then { c with uses = c.uses - 1 }
+                          (if card = c && (Player.compareOption (Some player) p)
+                           then { c with Uses = c.Uses - 1 }
                            else c), p) model.ActiveCards) },
-        Cmd.ofSub (fun dispatch -> AddActiveCard({ card with uses = 0 }, (Some player)) |> dispatch)
+        Cmd.ofSub (fun dispatch -> AddActiveCard({ card with Uses = 0 }, (Some player)) |> dispatch)
     | ChangeRemoteSetting ->
         let remote =
             ((Browser.Dom.window.document.getElementById "remote") :?> Browser.Types.HTMLInputElement).``checked``
@@ -383,7 +384,7 @@ let update (msg: Msg) (model: Model) =
          else
              model), Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
     | RemoveActiveCard card ->
-        { model with ActiveCards = List.filter (fun (c, _) -> card.id <> c.id) model.ActiveCards }, Cmd.Empty
+        { model with ActiveCards = List.filter (fun (c, _) -> card <> c) model.ActiveCards }, Cmd.Empty
 
 // VIEW (rendered with React)
 
@@ -459,11 +460,11 @@ let displayPlayer player model dispatch =
               [ h5 [ ClassName "card-title text-center" ] [ str (sprintf "%s (%d)" player.Name player.CardsPlayed) ]
                 div [ ClassName "d-flex justify-content-between" ]
                     [ button
-                        [ ClassName "card-text btn btn-secondary toggle-button"
+                        [ ClassName "card btn btn-secondary toggle-button"
                           OnClick(fun _ -> TogglePlayerActivity player |> dispatch) ]
                           [ str (if player.Active then "Suspend" else "Unsuspend") ]
                       button
-                          [ ClassName "card-text btn btn-secondary delete-button"
+                          [ ClassName "card btn btn-secondary delete-button"
                             OnClick(fun _ -> RemovePlayer player |> dispatch) ] [ str "Delete" ] ] ] ]
 
 let addPlayerFunction model dispatch =
@@ -515,7 +516,7 @@ let displayCurrentCard model dispatch =
                     [ span [ ClassName "h3" ]
                           [ str
                               (match model.CurrentCard with
-                               | Some (card) -> card.text
+                               | Some (card) -> card.Text
                                | None ->
                                    if model.Counter = 0 then "Click to start" else "No cards left") ] ] ] ]
 
@@ -546,16 +547,16 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
             ("card p-2 m-1" + (if Player.compareOption player model.CurrentPlayer
                                then " border-success"
                                else ""))
-          Title card.text ]
+          Title card.Text ]
         [ h5 [ ClassName "card-title h-100" ]
               [ str
-                  ((if player.IsSome then (sprintf "[%s] " player.Value.Name) else "") + card.text
-                   + (if card.rounds > 0 && card.uses = 0 then (sprintf " (%d)" card.rounds) else "")) ]
-          (if card.uses > 0 && player.IsSome then
+                  ((if player.IsSome then (sprintf "[%s] " player.Value.Name) else "") + card.Text
+                   + (if card.Rounds > 0 && card.Uses = 0 then (sprintf " (%d)" card.Rounds) else "")) ]
+          (if card.Uses > 0 && player.IsSome then
               button
-                  [ ClassName "card-text btn btn-primary"
+                  [ ClassName "card btn btn-primary"
                     OnClick(fun _ -> UseActiveCard(card, player.Value) |> dispatch) ]
-                  [ str (sprintf "Use (%d)" card.uses) ]
+                  [ str (sprintf "Use (%d)" card.Uses) ]
            else
                span [] [])
           button
