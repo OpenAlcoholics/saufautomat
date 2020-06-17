@@ -5,6 +5,7 @@ module App
  You can find more info about Elmish architecture and samples at https://elmish.github.io/
 *)
 
+open Card
 open Elmish
 open Elmish.React
 open Browser
@@ -19,16 +20,6 @@ open System.Text.RegularExpressions
 
 // MODEL
 
-type RawCard =
-    { id: int
-      text: string
-      count: int
-      uses: int
-      rounds: int
-      personal: bool
-      remote: bool
-      unique: bool }
-
 type Settings =
     { MinimumSips: int
       MaximumSips: int
@@ -40,9 +31,9 @@ type RoundInformation =
 
 type Model =
     { Players: Player.Type list
-      ActiveCards: (RawCard * Player.Type option) list
-      CurrentCard: RawCard option
-      Cards: RawCard list
+      ActiveCards: (Card.RawType * Player.Type option) list
+      CurrentCard: Card.RawType option
+      Cards: Card.RawType list
       CurrentPlayer: Player.Type option
       Counter: int
       DisplayPlayerNameDuplicateError: bool
@@ -56,8 +47,8 @@ type Msg =
     | ChangeActiveCard
     | ChangeActivePlayer
     | IncrementCounter
-    | AddActiveCard of RawCard * Player.Type option
-    | AddCards of RawCard list
+    | AddActiveCard of Card.RawType * Player.Type option
+    | AddCards of Card.RawType list
     | AddPlayer of Player.Type
     | RemovePlayer of Player.Type
     | TogglePlayerActivity of Player.Type
@@ -65,14 +56,14 @@ type Msg =
     | HidePlayerNameDuplicate
     | DecrementActiveRoundCards
     | DecrementPlayerRoundCards
-    | UseActiveCard of RawCard * Player.Type
+    | UseActiveCard of Card.RawType * Player.Type
     | SaveSettings
     | ChangeRemoteSetting
     | Reset
     | AdvanceTurn
     | AdvanceRound
     | PlayAudio
-    | RemoveActiveCard of RawCard
+    | RemoveActiveCard of Card.RawType
 
 let getCards dispatch =
     promise {
@@ -313,8 +304,7 @@ let update (msg: Msg) (model: Model) =
               ActiveCards = activeCards
               RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - 1 } },
         (if isCurrent then
-            Cmd.ofSub (fun dispatch ->
-                do AdvanceTurn)
+            Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
          else
              Cmd.Empty)
     | TogglePlayerActivity player ->
