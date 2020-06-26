@@ -23,7 +23,8 @@ open System.Text.RegularExpressions
 type Settings =
     { MinimumSips: int
       MaximumSips: int
-      Remote: bool }
+      Remote: bool
+      Audio: bool }
 
 type RoundInformation =
     { CardsToPlay: int
@@ -58,6 +59,7 @@ type Msg =
     | DecrementPlayerRoundCards
     | UseActiveCard of Card.Type * Player.Type
     | SaveSettings
+    | ChangeAudioSetting
     | ChangeRemoteSetting
     | Reset
     | AdvanceTurn
@@ -106,7 +108,8 @@ let init (): Model * Cmd<Msg> =
       Settings =
           { MinimumSips = 2
             MaximumSips = 10
-            Remote = true }
+            Remote = true
+            Audio = true }
       Round = 0
       RoundInformation =
           { CardsToPlay = 0
@@ -205,12 +208,13 @@ let update (msg: Msg) (model: Model) =
                dispatch DecrementPlayerRoundCards
                if roundHasEnded model then dispatch AdvanceRound)
     | PlayAudio ->
-        let audioId =
-            (if roundHasEnded model then "nextround-audio" else "nextcard-audio")
+        if model.Settings.Audio then
+            let audioId =
+                (if roundHasEnded model then "nextround-audio" else "nextcard-audio")
 
-        stop "nextcard-audio"
-        stop "nextround-audio"
-        play audioId
+            stop "nextcard-audio"
+            stop "nextround-audio"
+            play audioId
 
         model, Cmd.Empty
     | ChangeActiveCard ->
@@ -328,6 +332,11 @@ let update (msg: Msg) (model: Model) =
             ((Browser.Dom.window.document.getElementById "remote") :?> Browser.Types.HTMLInputElement).``checked``
 
         { model with Settings = { model.Settings with Remote = remote } }, Cmd.Empty
+    | ChangeAudioSetting ->
+        let audio =
+            ((Browser.Dom.window.document.getElementById "audio") :?> Browser.Types.HTMLInputElement).``checked``
+
+        { model with Settings = { model.Settings with Audio = audio } }, Cmd.Empty
     | SaveSettings ->
         let min =
             (match ((Browser.Dom.window.document.getElementById "minimum-sips") :?> Browser.Types.HTMLInputElement).value with
@@ -405,7 +414,18 @@ let settings model dispatch =
                                               InputType "checkbox"
                                               ClassName "m-1 w-100 col"
                                               Id "remote"
-                                              Checked(model.Settings.Remote) ] ] ] ]
+                                              Checked(model.Settings.Remote) ] ]
+                                  div [ ClassName "row" ]
+                                      [ label
+                                          [ For "audio"
+                                            ClassName "col" ] [ str "Audio" ]
+                                        input
+                                            [ Name "audio"
+                                              OnClick(fun _ -> dispatch ChangeAudioSetting)
+                                              InputType "checkbox"
+                                              ClassName "m-1 w-100 col"
+                                              Id "audio"
+                                              Checked(model.Settings.Audio) ] ] ] ]
                       div [ ClassName "modal-footer" ]
                           [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
                             button
