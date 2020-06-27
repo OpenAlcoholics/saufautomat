@@ -66,6 +66,7 @@ type Msg =
     | AdvanceRound
     | PlayAudio
     | RemoveActiveCard of Card.Type
+    | RemoveCardFromSession of Card.Type
 
 let getCards dispatch =
     promise {
@@ -365,6 +366,8 @@ let update (msg: Msg) (model: Model) =
              model), Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
     | RemoveActiveCard card ->
         { model with ActiveCards = List.filter (fun (c, _) -> card <> c) model.ActiveCards }, Cmd.Empty
+    | RemoveCardFromSession card ->
+        { model with Cards = List.filter (fun c -> card <> c) model.Cards }, Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
 
 // VIEW (rendered with React)
 
@@ -507,7 +510,11 @@ let displayCurrentCard model dispatch =
                               (match model.CurrentCard with
                                | Some (card) -> card.Text
                                | None ->
-                                   if model.Counter = 0 then "Click to start" else "No cards left") ] ] ] ]
+                                   if model.Counter = 0 then "Click to start" else "No cards left") ] ]
+                button [ ClassName "btn btn-secondary"
+                         Disabled model.CurrentCard.IsNone
+                         OnClick (fun _ -> if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
+                       [ str "Delete card from session" ] ] ]
 
 let displayInformationHeader model dispatch =
     div
