@@ -41,7 +41,8 @@ type Model =
       InitialLoad: bool
       Settings: Settings
       Round: int
-      RoundInformation: RoundInformation }
+      RoundInformation: RoundInformation
+      Time: DateTime }
 
 type Msg =
     | InitialLoad
@@ -67,6 +68,7 @@ type Msg =
     | PlayAudio
     | RemoveActiveCard of Card.Type
     | RemoveCardFromSession of Card.Type
+    | Tick
 
 let getCards dispatch =
     promise {
@@ -114,7 +116,8 @@ let init (): Model * Cmd<Msg> =
       Round = 0
       RoundInformation =
           { CardsToPlay = 0
-            InitialPlayerIndex = -1 } }, Cmd.Empty
+            InitialPlayerIndex = -1 }
+      Time = DateTime(0, 0, 0, 0, 0, 0) }, Cmd.Empty
 
 let unwrapMapOrDefault (opt: 'b option) (m: 'b -> 't) (def: 't) =
     if opt.IsSome then m opt.Value else def
@@ -194,6 +197,14 @@ let getPlayerByIndex index (players: Player.Type list): Player.Type option =
     try
         Some(players.Item index)
     with _ -> None
+
+
+let timerTick dispatch =
+    window.setInterval(fun _ ->
+        Tick |> dispatch
+    , 1000) |> ignore
+
+let subscription _ = Cmd.ofSub timerTick
 
 let update (msg: Msg) (model: Model) =
     match msg with
@@ -368,6 +379,8 @@ let update (msg: Msg) (model: Model) =
         { model with ActiveCards = List.filter (fun (c, _) -> card <> c) model.ActiveCards }, Cmd.Empty
     | RemoveCardFromSession card ->
         { model with Cards = List.filter (fun c -> card <> c) model.Cards }, Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
+    | Tick ->
+        { model with Time = model.Time.AddSeconds 0.99 }, Cmd.Empty
 
 // VIEW (rendered with React)
 
@@ -516,6 +529,11 @@ let displayCurrentCard model dispatch =
                          OnClick (fun _ -> if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
                        [ str "Delete card from session" ] ] ]
 
+let getTimeString (time: DateTime) =
+    let s = sprintf "%d" time.Second
+    let s = if time.Minute <> 0 then sprintf "%d:%s" time.Minute s else s
+    if time.Hour <> 0 then sprintf "%d:%s" time.Hour s else s
+
 let displayInformationHeader model dispatch =
     div
         [ Id "active-player-header"
@@ -527,7 +545,8 @@ let displayInformationHeader model dispatch =
                    | None -> "No active player") ]
           span [] [ str " | " ]
           span [ Title "Number of cards played so far" ] [ str (sprintf "Cards played %d" model.Counter) ]
-          span [] [ str (sprintf " | Round %d" model.Round) ]
+          span [] [ str (sprintf " | Round %d | " model.Round) ]
+          span [] [ str (getTimeString model.Time) ]
           div [ ClassName "progress" ]
               [ div
                   [ ClassName "progress-bar"
@@ -607,5 +626,6 @@ let view (model: Model) dispatch =
 // App
 Program.mkProgram init update view
 |> Program.withReactSynchronous "elmish-app"
+|> Program.withSubscription subscription
 |> Program.withConsoleTrace
 |> Program.run
