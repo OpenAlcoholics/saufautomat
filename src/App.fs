@@ -527,7 +527,9 @@ let displayCurrentCard model dispatch =
                 button [ ClassName "btn btn-secondary"
                          Disabled model.CurrentCard.IsNone
                          OnClick (fun _ -> if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
-                       [ str "Delete card from session" ] ] ]
+                       [ str "Delete card from session" ]
+                (if model.CurrentCard.IsSome && model.CurrentCard.Value.Personal then span [ ClassName "badge badge-secondary ml-2"
+                                                                                             Style [ FontSize "0.9rem" ] ] [ str "personal" ] else span [] []) ] ]
 
 let getTimeString (time: DateTime) =
     let s = sprintf "%d" time.Second
