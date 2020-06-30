@@ -58,3 +58,5 @@ jobs:
         run: sed -i -e "s#{{TAG}}#:$(echo ${{steps.vars.outputs.tag}})#g" .kubernetes/manifest.yaml
       - name: apply config
         run: kubectl -n drinkdome --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig apply -f .kubernetes/manifest.yaml
+      - name: purge cloudflare cache
+        run: curl -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/purge_cache" -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" -H "Content-Type: application/json" --data '{"purge_everything": true}'
