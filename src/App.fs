@@ -512,7 +512,7 @@ let displayCurrentCard model dispatch =
                               (match model.CurrentCard with
                                | Some (card) -> card.Text
                                | None ->
-                                   if model.Counter = 0 then (userLanguage) else (getKey "NO_CARDS_LEFT")) ] ]
+                                   if model.Counter = 0 then (getKey "CLICK_TO_START") else (getKey "NO_CARDS_LEFT")) ] ]
                 button [ ClassName "btn btn-secondary"
                          Disabled model.CurrentCard.IsNone
                          OnClick (fun _ -> if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
