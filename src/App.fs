@@ -26,7 +26,8 @@ type Settings =
     { MinimumSips: int
       MaximumSips: int
       Remote: bool
-      Audio: bool }
+      Audio: bool
+      Language: string }
 
 type RoundInformation =
     { CardsToPlay: int
@@ -66,13 +67,14 @@ type Msg =
     | Reset
     | AdvanceTurn
     | AdvanceRound
+    | ChangeLanguage of string
     | PlayAudio
     | RemoveActiveCard of Card.Type
     | RemoveCardFromSession of Card.Type
 
-let getCards dispatch =
+let getCards language dispatch =
     promise {
-        let url = "https://raw.githubusercontent.com/OpenAlcoholics/drinking-game-cards/v1/minified.json"
+        let url = sprintf "https://raw.githubusercontent.com/OpenAlcoholics/drinking-game-cards/feature/i18n/minified_%s.json" language
         let! res = Fetch.get (url)
         AddCards res |> dispatch
     }
@@ -112,7 +114,8 @@ let init (): Model * Cmd<Msg> =
           { MinimumSips = 2
             MaximumSips = 10
             Remote = true
-            Audio = true }
+            Audio = true
+            Language = (Seq.head ((unwrapOr navigator.language "en-US").Split '-')) }
       Round = 0
       RoundInformation =
           { CardsToPlay = 0
@@ -197,10 +200,12 @@ let getPlayerByIndex index (players: Player.Type list): Player.Type option =
         Some(players.Item index)
     with _ -> None
 
+let allowedLanguages = ["de"; "en"]
+
 let update (msg: Msg) (model: Model) =
     match msg with
     | InitialLoad ->
-        { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards dispatch |> Promise.start)
+        { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards model.Settings.Language dispatch |> Promise.start)
     | AdvanceTurn ->
         model,
         Cmd.ofSub (fun dispatch ->
@@ -351,11 +356,17 @@ let update (msg: Msg) (model: Model) =
              | "" -> model.Settings.MaximumSips
              | value -> value |> int)
 
+        let language =
+            (match ((Browser.Dom.window.document.getElementById "language") :?> Browser.Types.HTMLInputElement).value with
+             | "" -> model.Settings.Language
+             | value -> value)
+        let language = if not (List.exists ((=) language) allowedLanguages) then model.Settings.Language else language
+
         { model with
               Settings =
                   { model.Settings with
                         MinimumSips = min
-                        MaximumSips = max } }, Cmd.Empty
+                        MaximumSips = max } }, if language <> model.Settings.Language then Cmd.ofSub (fun dispatch -> ChangeLanguage language |> dispatch) else Cmd.Empty
     | Reset -> init ()
     | AdvanceRound ->
         (if model.Players.Length > 0 then
@@ -370,6 +381,10 @@ let update (msg: Msg) (model: Model) =
         { model with ActiveCards = List.filter (fun (c, _) -> card <> c) model.ActiveCards }, Cmd.Empty
     | RemoveCardFromSession card ->
         { model with Cards = List.filter (fun c -> card <> c) model.Cards }, Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
+    | ChangeLanguage language ->
+        { model with Settings = { model.Settings with Language = language }
+                     ActiveCards = [] },
+        Cmd.ofSub (fun dispatch -> getCards language dispatch |> Promise.start)
 
 // VIEW (rendered with React)
 
@@ -388,7 +403,7 @@ let settings model dispatch =
                                 [ div [ ClassName "row" ]
                                       [ label
                                           [ For "minimum-sips"
-                                            ClassName "col" ] [ str (getKey "SETTINGS_MINIMUM_SIPS") ]
+                                            ClassName "col" ] [ str (getKey (model.Settings.Language) "SETTINGS_MINIMUM_SIPS") ]
                                         input
                                             [ Name "minimum-sips"
                                               ClassName "m-1 w-100 col"
@@ -400,7 +415,7 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "maximum-sips"
-                                            ClassName "col" ] [ str (getKey "SETTINGS_MAXIMUM_SIPS") ]
+                                            ClassName "col" ] [ str (getKey (model.Settings.Language) "SETTINGS_MAXIMUM_SIPS") ]
                                         input
                                             [ Name "maximum-sips"
                                               ClassName "m-1 w-100 col"
@@ -412,7 +427,7 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "remote"
-                                            ClassName "col" ] [ str (getKey "SETTINGS_REMOTE") ]
+                                            ClassName "col" ] [ str (getKey (model.Settings.Language) "SETTINGS_REMOTE") ]
                                         input
                                             [ Name "remote"
                                               OnClick(fun _ -> dispatch ChangeRemoteSetting)
@@ -423,20 +438,32 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "audio"
-                                            ClassName "col" ] [ str (getKey "SETTINGS_AUDIO") ]
+                                            ClassName "col" ] [ str (getKey (model.Settings.Language) "SETTINGS_AUDIO") ]
                                         input
                                             [ Name "audio"
                                               OnClick(fun _ -> dispatch ChangeAudioSetting)
                                               InputType "checkbox"
                                               ClassName "m-1 w-100 col"
                                               Id "audio"
-                                              Checked(model.Settings.Audio) ] ] ] ]
+                                              Checked(model.Settings.Audio) ] ]
+                                  div [ ClassName "row" ]
+                                      [ label
+                                          [ For "language"
+                                            ClassName "col" ] [ str (getKey (model.Settings.Language) "SETTINGS_LANGUAGE") ]
+                                        input
+                                            [ Name "language"
+                                              ClassName "m-1 w-100 col"
+                                              Id "language"
+                                              Placeholder model.Settings.Language
+                                              MaxLength 2.
+                                              InputType "text"
+                                              Pattern "[a-z]{2}" ] ] ] ]
                       div [ ClassName "modal-footer" ]
                           [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
                             button
                                 [ ClassName "btn btn-primary"
                                   DataDismiss "modal"
-                                  OnClick(fun _ -> dispatch SaveSettings) ] [ str (getKey "SETTINGS_SAVE") ] ] ] ] ]
+                                  OnClick(fun _ -> dispatch SaveSettings) ] [ str (getKey (model.Settings.Language) "SETTINGS_SAVE") ] ] ] ] ]
 
 let addPlayer name model dispatch =
     match List.tryFind ((=) (Player.create name)) model.Players with
@@ -471,10 +498,10 @@ let displayPlayer player model dispatch =
                     [ button
                         [ ClassName "card btn btn-secondary toggle-button"
                           OnClick(fun _ -> TogglePlayerActivity player |> dispatch) ]
-                          [ str (if player.Active then (getKey "PLAYER_SUSPEND_ON") else (getKey "PLAYER_SUSPEND_OFF")) ]
+                          [ str (if player.Active then (getKey (model.Settings.Language) "PLAYER_SUSPEND_ON") else (getKey (model.Settings.Language) "PLAYER_SUSPEND_OFF")) ]
                       button
                           [ ClassName "card btn btn-secondary delete-button"
-                            OnClick(fun _ -> RemovePlayer player |> dispatch) ] [ str (getKey "PLAYER_DELETE") ] ] ] ]
+                            OnClick(fun _ -> RemovePlayer player |> dispatch) ] [ str (getKey (model.Settings.Language) "PLAYER_DELETE") ] ] ] ]
 
 let sidebar (model: Model) dispatch =
     div [ ClassName "col-md-2 sidebar col h-100" ]
@@ -488,7 +515,7 @@ let sidebar (model: Model) dispatch =
                     MaxLength 20. ]
                 button
                     [ ClassName "btn btn-primary m-1 w-100"
-                      OnClick(fun _ -> addPlayerFunction model dispatch) ] [ str (getKey "ADD_PLAYER") ] ]
+                      OnClick(fun _ -> addPlayerFunction model dispatch) ] [ str (getKey (model.Settings.Language) "ADD_PLAYER") ] ]
           hr []
           div
               [ ClassName "flex-row mb-4"
@@ -512,11 +539,11 @@ let displayCurrentCard model dispatch =
                               (match model.CurrentCard with
                                | Some (card) -> card.Text
                                | None ->
-                                   if model.Counter = 0 then (getKey "CLICK_TO_START") else (getKey "NO_CARDS_LEFT")) ] ]
+                                   if model.Counter = 0 then (getKey (model.Settings.Language) "CLICK_TO_START") else (getKey (model.Settings.Language) "NO_CARDS_LEFT")) ] ]
                 button [ ClassName "btn btn-secondary"
                          Disabled model.CurrentCard.IsNone
                          OnClick (fun _ -> if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
-                       [ str (getKey "DELETE_CARD_FROM_SESSION") ]
+                       [ str (getKey (model.Settings.Language) "DELETE_CARD_FROM_SESSION") ]
                 (if model.CurrentCard.IsSome && model.CurrentCard.Value.Personal then span [ ClassName "badge badge-secondary ml-2"
                                                                                              Style [ FontSize "0.9rem" ] ] [ str "personal" ] else span [] []) ] ]
 
@@ -530,7 +557,7 @@ let displayInformationHeader model dispatch =
                    | Some player -> player.Name
                    | None -> "No active player") ]
           span [] [ str " | " ]
-          span [ Title (getKey "NUMBER_CARDS_PLAYED") ] [ str (sprintf "%s %d" (getKey "CARDS_PLAYED") model.Counter) ]
+          span [ Title (getKey (model.Settings.Language) "NUMBER_CARDS_PLAYED") ] [ str (sprintf "%s %d" (getKey (model.Settings.Language) "CARDS_PLAYED") model.Counter) ]
           span [] [ str (sprintf " | Round %d | " model.Round) ]
           div [ ClassName "progress" ]
               [ div
@@ -556,12 +583,12 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
               button
                   [ ClassName "card btn btn-primary"
                     OnClick(fun _ -> UseActiveCard(card, player.Value) |> dispatch) ]
-                  [ str (sprintf "%s (%d)" (getKey "ACTIVE_CARD_USE") card.Uses) ]
+                  [ str (sprintf "%s (%d)" (getKey (model.Settings.Language) "ACTIVE_CARD_USE") card.Uses) ]
            else
                span [] [])
           button
               [ ClassName "btn btn-primary"
-                OnClick(fun _ -> RemoveActiveCard card |> dispatch) ] [ str (getKey "ACTIVE_CARD_DELETE") ] ]
+                OnClick(fun _ -> RemoveActiveCard card |> dispatch) ] [ str (getKey (model.Settings.Language) "ACTIVE_CARD_DELETE") ] ]
 
 let activeCards (model: Model) dispatch =
     div
@@ -594,7 +621,7 @@ let view (model: Model) dispatch =
                     [ button
                         [ ClassName "btn btn-primary m-1"
                           DataToggle "modal"
-                          DataTarget "#settings" ] [ str (getKey "SETTINGS") ]
+                          DataTarget "#settings" ] [ str (getKey (model.Settings.Language) "SETTINGS") ]
                       button
                           [ ClassName "btn btn-primary ml-1"
                             OnClick(fun _ -> dispatch Reset) ] [ str "Reset" ] ]

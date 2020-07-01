@@ -1,17 +1,9 @@
 module Resources
 
-open Browser.Navigator
-
 let unwrapOr (opt: 'b option) (def: 'b): 'b =
     match opt with
     | Some value -> value
     | None -> def
-
-let userLanguage =
-    let lang = unwrapOr (navigator.language) "en-US"
-    match Seq.head (lang.Split '-') with
-    | "de" -> "de"
-    | _ -> "en"
 
 let english =
     Map.empty.
@@ -33,7 +25,8 @@ let english =
         Add("SETTINGS_MAXIMUM_SIPS", "Maximum sips").
         Add("SETTINGS_REMOTE", "Remote").
         Add("SETTINGS_AUDIO", "Audio").
-        Add("SETTINGS_SAVE", "Save")
+        Add("SETTINGS_SAVE", "Save").
+        Add("SETTINGS_LANGUAGE", "Language")
 
 
 let german =
@@ -56,9 +49,10 @@ let german =
         Add("SETTINGS_MAXIMUM_SIPS", "Maximalanzahl Schlücke").
         Add("SETTINGS_REMOTE", "Remote").
         Add("SETTINGS_AUDIO", "Audio").
-        Add("SETTINGS_SAVE", "Speichern")
+        Add("SETTINGS_SAVE", "Speichern").
+        Add("SETTINGS_LANGUAGE", "Sprache")
 
-let getKey key =
-    unwrapOr (match userLanguage with
+let getKey language key =
+    unwrapOr (match language with
                 | "de" -> german.TryFind key
                 | _ -> english.TryFind key) "UNDEFINED"
