@@ -44,7 +44,7 @@ let german =
         Add("CARDS_PLAYED", "Karten gespielt").
         Add("NUMBER_CARDS_PLAYED", "Anzahl bisher gespielter Karten").
         Add("ADD_PLAYER", "Spieler hinzufügen").
-        Add("PLAYER_SUSPEND_ON", "Aufssetzen").
+        Add("PLAYER_SUSPEND_ON", "Aussetzen").
         Add("PLAYER_SUSPEND_OFF", "Unsuspend").
         Add("PLAYER_DELETE", "Löschen").
         Add("ACTIVE_CARD_DELETE", "Löschen").
