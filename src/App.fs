@@ -555,10 +555,10 @@ let displayInformationHeader model dispatch =
               [ str
                   (match model.CurrentPlayer with
                    | Some player -> player.Name
-                   | None -> "No active player") ]
+                   | None -> (getKey (model.Settings.Language) "NO_ACTIVE_PLAYER" )) ]
           span [] [ str " | " ]
           span [ Title (getKey (model.Settings.Language) "NUMBER_CARDS_PLAYED") ] [ str (sprintf "%s %d" (getKey (model.Settings.Language) "CARDS_PLAYED") model.Counter) ]
-          span [] [ str (sprintf " | Round %d | " model.Round) ]
+          span [] [ str (sprintf " | %s %d | " (getKey (model.Settings.Language) "ROUND") model.Round) ]
           div [ ClassName "progress" ]
               [ div
                   [ ClassName "progress-bar"
@@ -626,7 +626,7 @@ let view (model: Model) dispatch =
                           [ ClassName "btn btn-primary ml-1"
                             OnClick(fun _ -> dispatch Reset) ] [ str "Reset" ] ]
                 (displayInformationHeader model dispatch)
-                span [ ClassName "text-secondary" ] [ str "Contact: saufautomat@carstens.tech" ] ]
+                span [ ClassName "text-secondary" ] [ str (sprintf "%s: saufautomat@carstens.tech" (getKey (model.Settings.Language) "CONTACT")) ] ]
           div
               [ ClassName "row m-2"
                 Style [ Height "65%" ] ]

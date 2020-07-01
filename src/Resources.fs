@@ -8,6 +8,7 @@ let unwrapOr (opt: 'b option) (def: 'b): 'b =
 let english =
     Map.empty.
         Add("CLICK_TO_START", "Click me").
+        Add("CLICK_TO_START", "Click me").
         Add("DELETE_CARD_FROM_SESSION", "Delete card from session").
         Add("NO_CARDS_LEFT", "No cards left").
         Add("CARDS_PLAYED", "Cards played").
@@ -19,14 +20,16 @@ let english =
         Add("ACTIVE_CARD_DELETE", "Delete").
         Add("ACTIVE_CARD_USE", "Use").
         Add("RESET", "Reset").
-        Add("Contact", "Contact").
+        Add("CONTACT", "Contact").
         Add("SETTINGS", "Settings").
         Add("SETTINGS_MINIMUM_SIPS", "Minimum sips").
         Add("SETTINGS_MAXIMUM_SIPS", "Maximum sips").
         Add("SETTINGS_REMOTE", "Remote").
         Add("SETTINGS_AUDIO", "Audio").
         Add("SETTINGS_SAVE", "Save").
-        Add("SETTINGS_LANGUAGE", "Language")
+        Add("SETTINGS_LANGUAGE", "Language").
+        Add("NO_ACTIVE_PLAYER", "No active player").
+        Add("ROUND", "Round")
 
 
 let german =
@@ -43,14 +46,16 @@ let german =
         Add("ACTIVE_CARD_DELETE", "Löschen").
         Add("ACTIVE_CARD_USE", "Einsetzen").
         Add("RESET", "Zurücksetzen").
-        Add("Contact", "Kontakt").
+        Add("CONTACT", "Kontakt").
         Add("SETTINGS", "Einstellungen").
         Add("SETTINGS_MINIMUM_SIPS", "Mindestanzahl Schlücke").
         Add("SETTINGS_MAXIMUM_SIPS", "Maximalanzahl Schlücke").
         Add("SETTINGS_REMOTE", "Remote").
         Add("SETTINGS_AUDIO", "Audio").
         Add("SETTINGS_SAVE", "Speichern").
-        Add("SETTINGS_LANGUAGE", "Sprache")
+        Add("SETTINGS_LANGUAGE", "Sprache").
+        Add("NO_ACTIVE_PLAYER", "Kein aktiver Spieler").
+        Add("ROUND", "Runde")
 
 let getKey language key =
     unwrapOr (match language with
