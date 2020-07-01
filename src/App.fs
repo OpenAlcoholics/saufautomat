@@ -624,7 +624,7 @@ let view (model: Model) dispatch =
                           DataTarget "#settings" ] [ str (getKey (model.Settings.Language) "SETTINGS") ]
                       button
                           [ ClassName "btn btn-primary ml-1"
-                            OnClick(fun _ -> dispatch Reset) ] [ str "Reset" ] ]
+                            OnClick(fun _ -> dispatch Reset) ] [ str (getKey (model.Settings.Language) "RESET") ] ]
                 (displayInformationHeader model dispatch)
                 span [ ClassName "text-secondary" ] [ str (sprintf "%s: saufautomat@carstens.tech" (getKey (model.Settings.Language) "CONTACT")) ] ]
           div

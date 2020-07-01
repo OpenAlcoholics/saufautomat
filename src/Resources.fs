@@ -29,7 +29,8 @@ let english =
         Add("SETTINGS_SAVE", "Save").
         Add("SETTINGS_LANGUAGE", "Language").
         Add("NO_ACTIVE_PLAYER", "No active player").
-        Add("ROUND", "Round")
+        Add("ROUND", "Round").
+        Add("PERSONAL_CARD_INDICATOR", "personal")
 
 
 let german =
@@ -55,7 +56,8 @@ let german =
         Add("SETTINGS_SAVE", "Speichern").
         Add("SETTINGS_LANGUAGE", "Sprache").
         Add("NO_ACTIVE_PLAYER", "Kein aktiver Spieler").
-        Add("ROUND", "Runde")
+        Add("ROUND", "Runde").
+        Add("PERSONAL_CARD_INDICATOR", "persönlich")
 
 let getKey language key =
     unwrapOr (match language with
