@@ -9,14 +9,16 @@ open Card
 open Elmish
 open Elmish.React
 open Browser
+open Browser.Navigator
 open Fable.Core
 open Fable.React
 open Fable.React.Props
 open Player
-open Thoth.Fetch
-open Thoth.Json
+open Resources
 open System
 open System.Text.RegularExpressions
+open Thoth.Fetch
+open Thoth.Json
 
 // MODEL
 
@@ -386,7 +388,7 @@ let settings model dispatch =
                                 [ div [ ClassName "row" ]
                                       [ label
                                           [ For "minimum-sips"
-                                            ClassName "col" ] [ str "Minimum sips" ]
+                                            ClassName "col" ] [ str (getKey "SETTINGS_MINIMUM_SIPS") ]
                                         input
                                             [ Name "minimum-sips"
                                               ClassName "m-1 w-100 col"
@@ -398,7 +400,7 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "maximum-sips"
-                                            ClassName "col" ] [ str "Maximum sips" ]
+                                            ClassName "col" ] [ str (getKey "SETTINGS_MAXIMUM_SIPS") ]
                                         input
                                             [ Name "maximum-sips"
                                               ClassName "m-1 w-100 col"
@@ -410,7 +412,7 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "remote"
-                                            ClassName "col" ] [ str "Remote" ]
+                                            ClassName "col" ] [ str (getKey "SETTINGS_REMOTE") ]
                                         input
                                             [ Name "remote"
                                               OnClick(fun _ -> dispatch ChangeRemoteSetting)
@@ -421,7 +423,7 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "audio"
-                                            ClassName "col" ] [ str "Audio" ]
+                                            ClassName "col" ] [ str (getKey "SETTINGS_AUDIO") ]
                                         input
                                             [ Name "audio"
                                               OnClick(fun _ -> dispatch ChangeAudioSetting)
@@ -434,7 +436,7 @@ let settings model dispatch =
                             button
                                 [ ClassName "btn btn-primary"
                                   DataDismiss "modal"
-                                  OnClick(fun _ -> dispatch SaveSettings) ] [ str "Save" ] ] ] ] ]
+                                  OnClick(fun _ -> dispatch SaveSettings) ] [ str (getKey "SETTINGS_SAVE") ] ] ] ] ]
 
 let addPlayer name model dispatch =
     match List.tryFind ((=) (Player.create name)) model.Players with
@@ -469,10 +471,10 @@ let displayPlayer player model dispatch =
                     [ button
                         [ ClassName "card btn btn-secondary toggle-button"
                           OnClick(fun _ -> TogglePlayerActivity player |> dispatch) ]
-                          [ str (if player.Active then "Suspend" else "Unsuspend") ]
+                          [ str (if player.Active then (getKey "PLAYER_SUSPEND_ON") else (getKey "PLAYER_SUSPEND_OFF")) ]
                       button
                           [ ClassName "card btn btn-secondary delete-button"
-                            OnClick(fun _ -> RemovePlayer player |> dispatch) ] [ str "Delete" ] ] ] ]
+                            OnClick(fun _ -> RemovePlayer player |> dispatch) ] [ str (getKey "PLAYER_DELETE") ] ] ] ]
 
 let sidebar (model: Model) dispatch =
     div [ ClassName "col-md-2 sidebar col h-100" ]
@@ -486,7 +488,7 @@ let sidebar (model: Model) dispatch =
                     MaxLength 20. ]
                 button
                     [ ClassName "btn btn-primary m-1 w-100"
-                      OnClick(fun _ -> addPlayerFunction model dispatch) ] [ str "Add player" ] ]
+                      OnClick(fun _ -> addPlayerFunction model dispatch) ] [ str (getKey "ADD_PLAYER") ] ]
           hr []
           div
               [ ClassName "flex-row mb-4"
@@ -510,11 +512,11 @@ let displayCurrentCard model dispatch =
                               (match model.CurrentCard with
                                | Some (card) -> card.Text
                                | None ->
-                                   if model.Counter = 0 then "Click to start" else "No cards left") ] ]
+                                   if model.Counter = 0 then (userLanguage) else (getKey "NO_CARDS_LEFT")) ] ]
                 button [ ClassName "btn btn-secondary"
                          Disabled model.CurrentCard.IsNone
                          OnClick (fun _ -> if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
-                       [ str "Delete card from session" ]
+                       [ str (getKey "DELETE_CARD_FROM_SESSION") ]
                 (if model.CurrentCard.IsSome && model.CurrentCard.Value.Personal then span [ ClassName "badge badge-secondary ml-2"
                                                                                              Style [ FontSize "0.9rem" ] ] [ str "personal" ] else span [] []) ] ]
 
@@ -528,8 +530,8 @@ let displayInformationHeader model dispatch =
                    | Some player -> player.Name
                    | None -> "No active player") ]
           span [] [ str " | " ]
-          span [ Title "Number of cards played so far" ] [ str (sprintf "Cards played %d" model.Counter) ]
-          span [] [ str (sprintf " | Round %d" model.Round) ]
+          span [ Title (getKey "NUMBER_CARDS_PLAYED") ] [ str (sprintf "%s %d" (getKey "CARDS_PLAYED") model.Counter) ]
+          span [] [ str (sprintf " | Round %d | " model.Round) ]
           div [ ClassName "progress" ]
               [ div
                   [ ClassName "progress-bar"
@@ -554,12 +556,12 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
               button
                   [ ClassName "card btn btn-primary"
                     OnClick(fun _ -> UseActiveCard(card, player.Value) |> dispatch) ]
-                  [ str (sprintf "Use (%d)" card.Uses) ]
+                  [ str (sprintf "%s (%d)" (getKey "ACTIVE_CARD_USE") card.Uses) ]
            else
                span [] [])
           button
               [ ClassName "btn btn-primary"
-                OnClick(fun _ -> RemoveActiveCard card |> dispatch) ] [ str "Delete" ] ]
+                OnClick(fun _ -> RemoveActiveCard card |> dispatch) ] [ str (getKey "ACTIVE_CARD_DELETE") ] ]
 
 let activeCards (model: Model) dispatch =
     div
@@ -592,7 +594,7 @@ let view (model: Model) dispatch =
                     [ button
                         [ ClassName "btn btn-primary m-1"
                           DataToggle "modal"
-                          DataTarget "#settings" ] [ str "Settings" ]
+                          DataTarget "#settings" ] [ str (getKey "SETTINGS") ]
                       button
                           [ ClassName "btn btn-primary ml-1"
                             OnClick(fun _ -> dispatch Reset) ] [ str "Reset" ] ]
