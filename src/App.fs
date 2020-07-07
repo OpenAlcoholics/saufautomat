@@ -484,10 +484,12 @@ let joinHtmlElements (sep : ReactElement) (l : ReactElement list) =
     Seq.ofList l
         |> Seq.fold
             (fun acc y ->
-                Seq.append
-                    acc
-                    (Seq.ofList [ sep; y ])
-                )
+                if Seq.isEmpty acc then
+                    seq { y }
+                else Seq.append
+                        acc
+                        (Seq.ofList [ sep; y ])
+            )
             Seq.empty
         |> List.ofSeq
 
@@ -595,7 +597,7 @@ let progressBarHeader model =
               AriaValueMin "0"
               AriaValueMax(sprintf "%d" model.Cards.Length) ] [] ] ]
 
-let displayInformationHeader model dispatch =
+let displayInformationHeader model =
     let separator : ReactElement = span [ ] [ str " | " ]
     let elements = [(span []
                         [ str
@@ -604,13 +606,12 @@ let displayInformationHeader model dispatch =
                                 | None -> (getKey (model.Settings.Language) "NO_ACTIVE_PLAYER")) ])
                     (span [ Title(getKey (model.Settings.Language) "NUMBER_CARDS_PLAYED") ]
                         [ str (sprintf "%s %d" (getKey (model.Settings.Language) "CARDS_PLAYED") model.Counter) ])
-                    (span [] [ str (sprintf " | %s %d | " (getKey (model.Settings.Language) "ROUND") model.Round) ]) ]
+                    (span [] [ str (sprintf "%s %d" (getKey (model.Settings.Language) "ROUND") model.Round) ]) ]
 
     div
         [ Id "active-player-header"
           ClassName "text-center col text-truncate h3" ]
         (joinHtmlElements separator elements)
-
 
 let displayActiveCard (card, player: Player.Type option) model dispatch =
     div
@@ -670,7 +671,7 @@ let view (model: Model) dispatch =
                       button
                           [ ClassName "btn btn-primary ml-1"
                             OnClick(fun _ -> dispatch Reset) ] [ str (getKey (model.Settings.Language) "RESET") ] ]
-                (displayInformationHeader model dispatch)
+                displayInformationHeader model
                 span [ ClassName "text-secondary" ]
                     [ str (sprintf "%s: saufautomat@carstens.tech" (getKey (model.Settings.Language) "CONTACT")) ] ]
           div
