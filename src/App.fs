@@ -74,7 +74,10 @@ type Msg =
 
 let getCards language dispatch =
     promise {
-        let url = sprintf "https://raw.githubusercontent.com/OpenAlcoholics/drinking-game-cards/feature/i18n/minified_%s.json" language
+        let url =
+            sprintf
+                "https://raw.githubusercontent.com/OpenAlcoholics/drinking-game-cards/feature/i18n/minified_%s.json"
+                language
         let! res = Fetch.get (url)
         AddCards res |> dispatch
     }
@@ -200,12 +203,13 @@ let getPlayerByIndex index (players: Player.Type list): Player.Type option =
         Some(players.Item index)
     with _ -> None
 
-let allowedLanguages = ["de"; "en"]
+let allowedLanguages = [ "de"; "en" ]
 
 let update (msg: Msg) (model: Model) =
     match msg with
     | InitialLoad ->
-        { model with InitialLoad = false }, Cmd.ofSub (fun dispatch -> getCards model.Settings.Language dispatch |> Promise.start)
+        { model with InitialLoad = false },
+        Cmd.ofSub (fun dispatch -> getCards model.Settings.Language dispatch |> Promise.start)
     | AdvanceTurn ->
         model,
         Cmd.ofSub (fun dispatch ->
@@ -275,10 +279,7 @@ let update (msg: Msg) (model: Model) =
     | AddPlayer player ->
         { model with
               Players = model.Players @ [ player ]
-              RoundInformation =
-                  { model.RoundInformation with
-                        CardsToPlay =
-                            model.RoundInformation.CardsToPlay + 1 } },
+              RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay + 1 } },
         match model.CurrentPlayer with
         | Some _ -> Cmd.Empty
         | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
@@ -360,13 +361,20 @@ let update (msg: Msg) (model: Model) =
             (match ((Browser.Dom.window.document.getElementById "language") :?> Browser.Types.HTMLInputElement).value with
              | "" -> model.Settings.Language
              | value -> value)
-        let language = if not (List.exists ((=) language) allowedLanguages) then model.Settings.Language else language
+
+        let language =
+            if not (List.exists ((=) language) allowedLanguages)
+            then model.Settings.Language
+            else language
 
         { model with
               Settings =
                   { model.Settings with
                         MinimumSips = min
-                        MaximumSips = max } }, if language <> model.Settings.Language then Cmd.ofSub (fun dispatch -> ChangeLanguage language |> dispatch) else Cmd.Empty
+                        MaximumSips = max } },
+        (if language <> model.Settings.Language
+         then Cmd.ofSub (fun dispatch -> ChangeLanguage language |> dispatch)
+         else Cmd.Empty)
     | Reset -> init ()
     | AdvanceRound ->
         (if model.Players.Length > 0 then
@@ -380,11 +388,12 @@ let update (msg: Msg) (model: Model) =
     | RemoveActiveCard card ->
         { model with ActiveCards = List.filter (fun (c, _) -> card <> c) model.ActiveCards }, Cmd.Empty
     | RemoveCardFromSession card ->
-        { model with Cards = List.filter (fun c -> card <> c) model.Cards }, Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
+        { model with Cards = List.filter (fun c -> card <> c) model.Cards },
+        Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
     | ChangeLanguage language ->
-        { model with Settings = { model.Settings with Language = language }
-                     ActiveCards = [] },
-        Cmd.ofSub (fun dispatch -> getCards language dispatch |> Promise.start)
+        { model with
+              Settings = { model.Settings with Language = language }
+              ActiveCards = [] }, Cmd.ofSub (fun dispatch -> getCards language dispatch |> Promise.start)
 
 // VIEW (rendered with React)
 
@@ -403,7 +412,8 @@ let settings model dispatch =
                                 [ div [ ClassName "row" ]
                                       [ label
                                           [ For "minimum-sips"
-                                            ClassName "col" ] [ str (getKey (model.Settings.Language) "SETTINGS_MINIMUM_SIPS") ]
+                                            ClassName "col" ]
+                                            [ str (getKey (model.Settings.Language) "SETTINGS_MINIMUM_SIPS") ]
                                         input
                                             [ Name "minimum-sips"
                                               ClassName "m-1 w-100 col"
@@ -415,7 +425,8 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "maximum-sips"
-                                            ClassName "col" ] [ str (getKey (model.Settings.Language) "SETTINGS_MAXIMUM_SIPS") ]
+                                            ClassName "col" ]
+                                            [ str (getKey (model.Settings.Language) "SETTINGS_MAXIMUM_SIPS") ]
                                         input
                                             [ Name "maximum-sips"
                                               ClassName "m-1 w-100 col"
@@ -427,7 +438,8 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "remote"
-                                            ClassName "col" ] [ str (getKey (model.Settings.Language) "SETTINGS_REMOTE") ]
+                                            ClassName "col" ]
+                                            [ str (getKey (model.Settings.Language) "SETTINGS_REMOTE") ]
                                         input
                                             [ Name "remote"
                                               OnClick(fun _ -> dispatch ChangeRemoteSetting)
@@ -438,7 +450,8 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "audio"
-                                            ClassName "col" ] [ str (getKey (model.Settings.Language) "SETTINGS_AUDIO") ]
+                                            ClassName "col" ]
+                                            [ str (getKey (model.Settings.Language) "SETTINGS_AUDIO") ]
                                         input
                                             [ Name "audio"
                                               OnClick(fun _ -> dispatch ChangeAudioSetting)
@@ -449,7 +462,8 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "language"
-                                            ClassName "col" ] [ str (getKey (model.Settings.Language) "SETTINGS_LANGUAGE") ]
+                                            ClassName "col" ]
+                                            [ str (getKey (model.Settings.Language) "SETTINGS_LANGUAGE") ]
                                         input
                                             [ Name "language"
                                               ClassName "m-1 w-100 col"
@@ -463,7 +477,8 @@ let settings model dispatch =
                             button
                                 [ ClassName "btn btn-primary"
                                   DataDismiss "modal"
-                                  OnClick(fun _ -> dispatch SaveSettings) ] [ str (getKey (model.Settings.Language) "SETTINGS_SAVE") ] ] ] ] ]
+                                  OnClick(fun _ -> dispatch SaveSettings) ]
+                                [ str (getKey (model.Settings.Language) "SETTINGS_SAVE") ] ] ] ] ]
 
 let addPlayer name model dispatch =
     match List.tryFind ((=) (Player.create name)) model.Players with
@@ -481,8 +496,7 @@ let addPlayerFunction model dispatch =
          | true ->
              ((Browser.Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value <- ""
          | false ->
-             DisplayPlayerNameDuplicate
-             |> dispatch)
+             DisplayPlayerNameDuplicate |> dispatch)
 
 let displayPlayer player model dispatch =
     div
@@ -498,10 +512,14 @@ let displayPlayer player model dispatch =
                     [ button
                         [ ClassName "card btn btn-secondary toggle-button"
                           OnClick(fun _ -> TogglePlayerActivity player |> dispatch) ]
-                          [ str (if player.Active then (getKey (model.Settings.Language) "PLAYER_SUSPEND_ON") else (getKey (model.Settings.Language) "PLAYER_SUSPEND_OFF")) ]
+                          [ str
+                              (if player.Active
+                               then (getKey (model.Settings.Language) "PLAYER_SUSPEND_ON")
+                               else (getKey (model.Settings.Language) "PLAYER_SUSPEND_OFF")) ]
                       button
                           [ ClassName "card btn btn-secondary delete-button"
-                            OnClick(fun _ -> RemovePlayer player |> dispatch) ] [ str (getKey (model.Settings.Language) "PLAYER_DELETE") ] ] ] ]
+                            OnClick(fun _ -> RemovePlayer player |> dispatch) ]
+                          [ str (getKey (model.Settings.Language) "PLAYER_DELETE") ] ] ] ]
 
 let sidebar (model: Model) dispatch =
     div [ ClassName "col-md-2 sidebar col h-100" ]
@@ -515,7 +533,8 @@ let sidebar (model: Model) dispatch =
                     MaxLength 20. ]
                 button
                     [ ClassName "btn btn-primary m-1 w-100"
-                      OnClick(fun _ -> addPlayerFunction model dispatch) ] [ str (getKey (model.Settings.Language) "ADD_PLAYER") ] ]
+                      OnClick(fun _ -> addPlayerFunction model dispatch) ]
+                    [ str (getKey (model.Settings.Language) "ADD_PLAYER") ] ]
           hr []
           div
               [ ClassName "flex-row mb-4"
@@ -539,13 +558,21 @@ let displayCurrentCard model dispatch =
                               (match model.CurrentCard with
                                | Some (card) -> card.Text
                                | None ->
-                                   if model.Counter = 0 then (getKey (model.Settings.Language) "CLICK_TO_START") else (getKey (model.Settings.Language) "NO_CARDS_LEFT")) ] ]
-                button [ ClassName "btn btn-secondary"
-                         Disabled model.CurrentCard.IsNone
-                         OnClick (fun _ -> if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
-                       [ str (getKey (model.Settings.Language) "DELETE_CARD_FROM_SESSION") ]
-                (if model.CurrentCard.IsSome && model.CurrentCard.Value.Personal then span [ ClassName "badge badge-secondary ml-2"
-                                                                                             Style [ FontSize "0.9rem" ] ] [ str "personal" ] else span [] []) ] ]
+                                   if model.Counter = 0
+                                   then (getKey (model.Settings.Language) "CLICK_TO_START")
+                                   else (getKey (model.Settings.Language) "NO_CARDS_LEFT")) ] ]
+                button
+                    [ ClassName "btn btn-secondary"
+                      Disabled model.CurrentCard.IsNone
+                      OnClick(fun _ ->
+                          if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
+                    [ str (getKey (model.Settings.Language) "DELETE_CARD_FROM_SESSION") ]
+                (if model.CurrentCard.IsSome && model.CurrentCard.Value.Personal then
+                    span
+                        [ ClassName "badge badge-secondary ml-2"
+                          Style [ FontSize "0.9rem" ] ] [ str "personal" ]
+                 else
+                     span [] []) ] ]
 
 let displayInformationHeader model dispatch =
     div
@@ -555,9 +582,10 @@ let displayInformationHeader model dispatch =
               [ str
                   (match model.CurrentPlayer with
                    | Some player -> player.Name
-                   | None -> (getKey (model.Settings.Language) "NO_ACTIVE_PLAYER" )) ]
+                   | None -> (getKey (model.Settings.Language) "NO_ACTIVE_PLAYER")) ]
           span [] [ str " | " ]
-          span [ Title (getKey (model.Settings.Language) "NUMBER_CARDS_PLAYED") ] [ str (sprintf "%s %d" (getKey (model.Settings.Language) "CARDS_PLAYED") model.Counter) ]
+          span [ Title(getKey (model.Settings.Language) "NUMBER_CARDS_PLAYED") ]
+              [ str (sprintf "%s %d" (getKey (model.Settings.Language) "CARDS_PLAYED") model.Counter) ]
           span [] [ str (sprintf " | %s %d | " (getKey (model.Settings.Language) "ROUND") model.Round) ]
           div [ ClassName "progress" ]
               [ div
@@ -588,7 +616,8 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
                span [] [])
           button
               [ ClassName "btn btn-primary"
-                OnClick(fun _ -> RemoveActiveCard card |> dispatch) ] [ str (getKey (model.Settings.Language) "ACTIVE_CARD_DELETE") ] ]
+                OnClick(fun _ -> RemoveActiveCard card |> dispatch) ]
+              [ str (getKey (model.Settings.Language) "ACTIVE_CARD_DELETE") ] ]
 
 let activeCards (model: Model) dispatch =
     div
@@ -626,7 +655,8 @@ let view (model: Model) dispatch =
                           [ ClassName "btn btn-primary ml-1"
                             OnClick(fun _ -> dispatch Reset) ] [ str (getKey (model.Settings.Language) "RESET") ] ]
                 (displayInformationHeader model dispatch)
-                span [ ClassName "text-secondary" ] [ str (sprintf "%s: saufautomat@carstens.tech" (getKey (model.Settings.Language) "CONTACT")) ] ]
+                span [ ClassName "text-secondary" ]
+                    [ str (sprintf "%s: saufautomat@carstens.tech" (getKey (model.Settings.Language) "CONTACT")) ] ]
           div
               [ ClassName "row m-2"
                 Style [ Height "65%" ] ]
