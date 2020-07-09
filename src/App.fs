@@ -492,7 +492,7 @@ let settings model dispatch =
                                             [ Name "language"
                                               ClassName "m-1 w-100 col"
                                               Id "language" ]
-                                            (List.map (fun language -> option [] [ str language ]) allowedLanguages) ] ] ]
+                                            (List.map (fun language -> option [ Selected (language = model.Settings.Language)  ] [ str language ]) allowedLanguages) ] ] ]
                       div [ ClassName "modal-footer" ]
                           [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
                             button
@@ -551,7 +551,7 @@ let displayPlayer player model dispatch =
                           [ str (getKey (model.Settings.Language) "PLAYER_DELETE") ] ] ] ]
 
 let sidebar (model: Model) dispatch =
-    div [ ClassName "col-md-2 sidebar col h-100" ]
+    div [ ClassName "col-md-2 sidebar col h-100 d-none d-md-block d-lg-block d-xl-block" ]
         [ div [ ClassName "form-group" ]
               [ input
                   [ Name "add-player-field"
@@ -591,7 +591,7 @@ let displayCurrentCard model dispatch =
                                    then (getKey (model.Settings.Language) "CLICK_TO_START")
                                    else (getKey (model.Settings.Language) "NO_CARDS_LEFT")) ] ]
                 button
-                    [ ClassName "btn btn-secondary"
+                    [ ClassName "btn btn-secondary d-none d-md-block d-lg-block d-xl-block"
                       Disabled model.CurrentCard.IsNone
                       OnClick(fun _ ->
                           if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
@@ -628,7 +628,7 @@ let displayInformationHeader model =
 
     div
         [ Id "active-player-header"
-          ClassName "text-center col text-truncate h3" ] (joinHtmlElements separator elements)
+          ClassName "text-center col text-truncate h3 d-none d-md-block d-lg-block d-xl-block" ] (joinHtmlElements separator elements)
 
 let displayActiveCard (card, player: Player.Type option) model dispatch =
     div
@@ -690,7 +690,7 @@ let view (model: Model) dispatch =
                           [ ClassName "btn btn-primary ml-1"
                             OnClick(fun _ -> dispatch Reset) ] [ str (getKey (model.Settings.Language) "RESET") ] ]
                 displayInformationHeader model
-                span [ ClassName "text-secondary" ]
+                span [ ClassName "text-secondary d-none d-md-block d-lg-block d-xl-block" ]
                     [ str (sprintf "%s: saufautomat@carstens.tech" (getKey (model.Settings.Language) "CONTACT")) ] ]
           div
               [ ClassName "row m-2"
