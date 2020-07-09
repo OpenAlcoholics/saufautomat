@@ -203,6 +203,7 @@ let getNextCard cards model =
         let max = model.Settings.MaximumSips
 
         let text = card.Text.Replace("{int: i}", "{int}").Replace("{int: j}", "{int}").Replace("{int: k}", "{int}")
+
         let replacement_text =
             (Seq.map (fun (w: string) ->
                 // This is temporary until the parser and variable replacement is implemented
@@ -491,10 +492,7 @@ let settings model dispatch =
                                             [ Name "language"
                                               ClassName "m-1 w-100 col"
                                               Id "language" ]
-                                            (List.map
-                                                 (fun language ->
-                                                        option [  ] [ str language ])
-                                                 allowedLanguages) ] ] ]
+                                            (List.map (fun language -> option [] [ str language ]) allowedLanguages) ] ] ]
                       div [ ClassName "modal-footer" ]
                           [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
                             button
@@ -503,18 +501,13 @@ let settings model dispatch =
                                   OnClick(fun _ -> dispatch SaveSettings) ]
                                 [ str (getKey (model.Settings.Language) "SETTINGS_SAVE") ] ] ] ] ]
 
-let joinHtmlElements (sep : ReactElement) (l : ReactElement list) =
+let joinHtmlElements (sep: ReactElement) (l: ReactElement list) =
     Seq.ofList l
-        |> Seq.fold
-            (fun acc y ->
-                if Seq.isEmpty acc then
-                    seq { y }
-                else Seq.append
-                        acc
-                        (Seq.ofList [ sep; y ])
-            )
-            Seq.empty
-        |> List.ofSeq
+    |> Seq.fold (fun acc y ->
+        if Seq.isEmpty acc
+        then seq { y }
+        else Seq.append acc (Seq.ofList [ sep; y ])) Seq.empty
+    |> List.ofSeq
 
 let addPlayer name model dispatch =
     match List.tryFind ((=) (Player.create name)) model.Players with
@@ -612,29 +605,30 @@ let displayCurrentCard model dispatch =
 
 let progressBarHeader model =
     [ div [ ClassName "progress" ]
-        [ div
-            [ ClassName "progress-bar"
-              Role "progressbar"
-              Style([ Width(sprintf "%d%%" ((model.Counter * 100 / model.Cards.Length))) ])
-              AriaValueNow(sprintf "%d" model.Counter)
-              AriaValueMin "0"
-              AriaValueMax(sprintf "%d" model.Cards.Length) ] [] ] ]
+          [ div
+              [ ClassName "progress-bar"
+                Role "progressbar"
+                Style([ Width(sprintf "%d%%" ((model.Counter * 100 / model.Cards.Length))) ])
+                AriaValueNow(sprintf "%d" model.Counter)
+                AriaValueMin "0"
+                AriaValueMax(sprintf "%d" model.Cards.Length) ] [] ] ]
 
 let displayInformationHeader model =
-    let separator : ReactElement = span [ ] [ str " | " ]
-    let elements = [(span []
-                        [ str
-                            (match model.CurrentPlayer with
-                                | Some player -> player.Name
-                                | None -> (getKey (model.Settings.Language) "NO_ACTIVE_PLAYER")) ])
-                    (span [ Title(getKey (model.Settings.Language) "NUMBER_CARDS_PLAYED") ]
-                        [ str (sprintf "%s %d" (getKey (model.Settings.Language) "CARDS_PLAYED") model.Counter) ])
-                    (span [] [ str (sprintf "%s %d" (getKey (model.Settings.Language) "ROUND") model.Round) ]) ]
+    let separator: ReactElement = span [] [ str " | " ]
+
+    let elements =
+        [ (span []
+               [ str
+                   (match model.CurrentPlayer with
+                    | Some player -> player.Name
+                    | None -> (getKey (model.Settings.Language) "NO_ACTIVE_PLAYER")) ])
+          (span [ Title(getKey (model.Settings.Language) "NUMBER_CARDS_PLAYED") ]
+               [ str (sprintf "%s %d" (getKey (model.Settings.Language) "CARDS_PLAYED") model.Counter) ])
+          (span [] [ str (sprintf "%s %d" (getKey (model.Settings.Language) "ROUND") model.Round) ]) ]
 
     div
         [ Id "active-player-header"
-          ClassName "text-center col text-truncate h3" ]
-        (joinHtmlElements separator elements)
+          ClassName "text-center col text-truncate h3" ] (joinHtmlElements separator elements)
 
 let displayActiveCard (card, player: Player.Type option) model dispatch =
     div
