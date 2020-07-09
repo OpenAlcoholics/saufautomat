@@ -412,7 +412,7 @@ let settings model dispatch =
                                 [ div [ ClassName "row" ]
                                       [ label
                                           [ For "minimum-sips"
-                                            ClassName "col" ]
+                                            ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_MINIMUM_SIPS") ]
                                         input
                                             [ Name "minimum-sips"
@@ -425,7 +425,7 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "maximum-sips"
-                                            ClassName "col" ]
+                                            ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_MAXIMUM_SIPS") ]
                                         input
                                             [ Name "maximum-sips"
@@ -438,7 +438,7 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "remote"
-                                            ClassName "col" ]
+                                            ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_REMOTE") ]
                                         input
                                             [ Name "remote"
@@ -450,7 +450,7 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "audio"
-                                            ClassName "col" ]
+                                            ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_AUDIO") ]
                                         input
                                             [ Name "audio"
@@ -462,7 +462,7 @@ let settings model dispatch =
                                   div [ ClassName "row" ]
                                       [ label
                                           [ For "language"
-                                            ClassName "col" ]
+                                            ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_LANGUAGE") ]
                                         input
                                             [ Name "language"
