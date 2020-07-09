@@ -92,6 +92,17 @@ let stop id =
     ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).pause()
     assignCurrentTime ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement) "0.0"
 
+let findCookieValue (name: string): string option =
+    let kvArrToPair (kvArr: string []): string * string =
+        match kvArr with
+        | [| k; v |] -> (k, v)
+        | _ -> ("", "")
+
+    let rawCookies: string = Browser.Dom.document.cookie
+    rawCookies.Split ';'
+    |> Array.map (fun (s: string) -> s.Trim().Split '=' |> kvArrToPair)
+    |> Map.ofArray
+    |> Map.tryFind name
 
 type HtmlAttr =
     | [<CompiledName("aria-valuenow")>] AriaValueNow of string
@@ -114,11 +125,21 @@ let init (): Model * Cmd<Msg> =
       DisplayPlayerNameDuplicateError = false
       InitialLoad = true
       Settings =
-          { MinimumSips = 2
-            MaximumSips = 10
-            Remote = true
-            Audio = true
-            Language = (Seq.head ((unwrapOr navigator.language "en-US").Split '-')) }
+          { MinimumSips = int (unwrapOr
+                            (findCookieValue "minimum-sips")
+                            "2")
+            MaximumSips = (unwrapOr
+                            (findCookieValue "maximum-sips")
+                            "10") |> int
+            Remote = (unwrapOr
+                        (findCookieValue "remote")
+                        "true") |> Convert.ToBoolean
+            Audio = (unwrapOr
+                        (findCookieValue "audio")
+                        "true") |> Convert.ToBoolean
+            Language = (unwrapOr
+                            (findCookieValue "language")
+                            (Seq.head ((unwrapOr navigator.language "en-US").Split '-'))) }
       Round = 0
       RoundInformation =
           { CardsToPlay = 0
