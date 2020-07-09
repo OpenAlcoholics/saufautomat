@@ -466,14 +466,14 @@ let settings model dispatch =
                                           [ For "language"
                                             ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_LANGUAGE") ]
-                                        input
+                                        select
                                             [ Name "language"
                                               ClassName "m-1 w-100 col"
-                                              Id "language"
-                                              Placeholder model.Settings.Language
-                                              MaxLength 2.
-                                              InputType "text"
-                                              Pattern "[a-z]{2}" ] ] ] ]
+                                              Id "language" ]
+                                            (List.map
+                                                 (fun language ->
+                                                        option [  ] [ str language ])
+                                                 allowedLanguages) ] ] ]
                       div [ ClassName "modal-footer" ]
                           [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
                             button
