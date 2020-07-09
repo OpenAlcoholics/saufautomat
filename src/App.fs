@@ -638,10 +638,11 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
 
 let activeCards (model: Model) dispatch =
     div
-        [ ClassName "active-cards row mr-4 mt-3"
+        [ ClassName "active-cards row mt-3"
           Style
               [ Height "22%"
-                OverflowY "scroll" ] ]
+                OverflowY "scroll"
+                MarginRight "1.67em" ] ]
         [ div [ ClassName "col d-flex flex-wrap" ]
               (List.map (fun card -> displayActiveCard card model dispatch)
                    (List.rev
