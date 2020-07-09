@@ -151,7 +151,7 @@ let rec findNextActivePlayer (playerList: Player.Type list) model =
 
 // UPDATE
 
-let int_replacement_regex = new Regex("{int(:?:(\d+)-(\d+))?}")
+let int_replacement_regex = Regex("{int(:\s*[a-z]+)?}")
 
 let filterCardsForTurn cards model =
     let distinctCount = (Card.getDistinctCount cards)
@@ -181,12 +181,14 @@ let getNextCard cards model =
         let min = model.Settings.MinimumSips
         let max = model.Settings.MaximumSips
 
+        let text = card.Text.Replace("{int: i}", "{int}").Replace("{int: j}", "{int}").Replace("{int: k}", "{int}")
         let replacement_text =
-            (Seq.map (fun w ->
+            (Seq.map (fun (w: string) ->
+                // This is temporary until the parser and variable replacement is implemented
                 let m = int_replacement_regex.Match w
                 match m.Success with
                 | true -> (sprintf "%d" ((System.Random().Next()) % (max - min + 1) + min))
-                | false -> w) (card.Text.Split ' '))
+                | false -> w) (text.Split ' '))
             |> String.concat " "
         Some { card with Text = replacement_text }
 
