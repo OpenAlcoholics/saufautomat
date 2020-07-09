@@ -133,10 +133,10 @@ let init (): Model * Cmd<Msg> =
                             "10") |> int
             Remote = (unwrapOr
                         (findCookieValue "remote")
-                        "true") |> Convert.ToBoolean
+                        "true") = "true"
             Audio = (unwrapOr
                         (findCookieValue "audio")
-                        "true") |> Convert.ToBoolean
+                        "true") = "true"
             Language = (unwrapOr
                             (findCookieValue "language")
                             (Seq.head ((unwrapOr navigator.language "en-US").Split '-'))) }
