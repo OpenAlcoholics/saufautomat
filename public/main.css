@@ -1,5 +1,5 @@
 body {
-    overflow: hidden;
+    height: 97% !important;
 }
 
 .delete-button:hover {

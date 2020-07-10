@@ -20,7 +20,18 @@ let create name =
       CardsPlayed = 0 }
 
 let compareOption (player1: Type option) (player2: Type option) : bool =
-    if player1.IsSome && player2.IsSome then player1.Value.Name = player2.Value.Name else false
+    if player1.IsSome && player2.IsSome then player1.Value = player2.Value else false
 
 let filterActiveCards player cards =
     List.map (fun (c, _) -> c) (List.filter (fun (_, p) -> compareOption (Some player) p) cards)
+
+let getActive players : Type list =
+    List.filter (fun player -> player.Active) players
+
+let getIndex player players =
+    match player with
+    | Some p -> (List.tryFindIndex ((=) p) players)
+    | None -> None
+
+let isCurrent player current =
+    compareOption (Some player) current

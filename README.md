@@ -2,7 +2,7 @@
 
 A website which supports your and your friends alcoholism.
 
-If you want this on an android smartphone, take a look at OpenAlcoholics/saufautomobil.
+If you want this on an android smartphone, take a look at [OpenAlcoholics/saufautomobil](https://github.com/OpenAlcoholics/saufautomobil).
 
 ## Tasks
 
