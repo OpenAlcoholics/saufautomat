@@ -204,7 +204,7 @@ let getNextCard cards model =
         Some { card with Text = replacement_text }
 
 let explodeCards cards =
-    (List.map (fun card -> ([ card ] |> Seq.collect (fun c -> List.replicate c.Count { c with Count = 1  }))) cards)
+    (List.map (fun card -> ([ card ] |> Seq.collect (fun c -> List.replicate c.Count { c with Count = 1 }))) cards)
     |> Seq.reduce Seq.append
     |> List.ofSeq
 
@@ -334,10 +334,12 @@ let update (msg: Msg) (model: Model) =
         { model with
               ActiveCards =
                   List.filter (fun (c, _) -> (c.Rounds <> 0 || c.Uses > 0))
-                      (List.map (fun (c, p) ->
-                          (if Player.compareOption model.CurrentPlayer p
-                           then { c with Rounds = c.Rounds - 1 }
-                           else c), p) model.ActiveCards) }, Cmd.Empty
+                      (List.map (fun (card, player) ->
+                          (if Player.compareOption model.CurrentPlayer player
+                           then { card with Rounds = if card.Rounds > 0 && card.Uses = 0 && player.IsNone
+                                                     then card.Rounds - 1
+                                                     else card.Rounds }
+                           else card), player) model.ActiveCards) }, Cmd.Empty
     | UseActiveCard (card, player) ->
         { model with
               ActiveCards =
@@ -397,7 +399,7 @@ let update (msg: Msg) (model: Model) =
                       { CardsToPlay = (Player.getActive model.Players).Length - 1
                         InitialPlayerIndex = (unwrapOr (Player.getIndex model.CurrentPlayer model.Players) 0) - 1 } }
          else
-             model), Cmd.ofSub (fun dispatch -> dispatch DecrementActiveRoundCards)
+             model), Cmd.Empty
     | RemoveActiveCard card ->
         { model with ActiveCards = List.filter (fun (c, _) -> card <> c) model.ActiveCards }, Cmd.Empty
     | RemoveCardFromSession card ->
