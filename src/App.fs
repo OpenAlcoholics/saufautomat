@@ -172,13 +172,16 @@ let filterCardsForTurn cards model =
             && if model.Players.Length = 0 then
                 (not card.Personal) && card.Rounds = 0
                else
-                   true && if distinctCount > 1 // TODO: this should be checked after everything else
-                           then card.Id <> (unwrapMapOrDefault model.CurrentCard (fun c -> c.Id) -1)
-                           else true) cards
+                   true) cards
 
-    List.filter (fun card ->
+    let cards = List.filter (fun card ->
         if card.Unique && not card.Personal
         then (List.filter (fun (activeCard, _) -> card.Unique && (activeCard = card)) model.ActiveCards).Length = 0
+        else true) cards
+
+    List.filter (fun card ->
+        if distinctCount > 1
+        then card.Id <> (unwrapMapOrDefault model.CurrentCard (fun c -> c.Id) -1)
         else true) cards
 
 let getNextCard cards model =
