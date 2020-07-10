@@ -701,7 +701,7 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
 
 let activeCards (model: Model) dispatch =
     div
-        [ ClassName "active-cards row mt-3"
+        [ ClassName "active-cards row mt-3 d-none d-lg-block d-xl-block"
           Style
               [ Height "22%"
                 OverflowY "scroll"
