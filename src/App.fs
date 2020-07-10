@@ -9,16 +9,13 @@ open Card
 open Elmish
 open Elmish.React
 open Browser
-open Browser.Navigator
 open Fable.Core
 open Fable.React
 open Fable.React.Props
 open Player
 open Resources
-open System
 open System.Text.RegularExpressions
 open Thoth.Fetch
-open Thoth.Json
 
 // MODEL
 
@@ -125,21 +122,12 @@ let init (): Model * Cmd<Msg> =
       DisplayPlayerNameDuplicateError = false
       InitialLoad = true
       Settings =
-          { MinimumSips = int (unwrapOr
-                            (findCookieValue "minimum-sips")
-                            "2")
-            MaximumSips = (unwrapOr
-                            (findCookieValue "maximum-sips")
-                            "10") |> int
-            Remote = (unwrapOr
-                        (findCookieValue "remote")
-                        "true") = "true"
-            Audio = (unwrapOr
-                        (findCookieValue "audio")
-                        "true") = "true"
-            Language = (unwrapOr
-                            (findCookieValue "language")
-                            (Seq.head ((unwrapOr navigator.language "en-US").Split '-'))) }
+          { MinimumSips = int (unwrapOr (findCookieValue "minimum-sips") "2")
+            MaximumSips = (unwrapOr (findCookieValue "maximum-sips") "10") |> int
+            Remote = (unwrapOr (findCookieValue "remote") "true") = "true"
+            Audio = (unwrapOr (findCookieValue "audio") "true") = "true"
+            Language =
+                (unwrapOr (findCookieValue "language") (Seq.head ((unwrapOr navigator.language "en-US").Split '-'))) }
       Round = 0
       RoundInformation =
           { CardsToPlay = 0
@@ -188,7 +176,7 @@ let filterCardsForTurn cards model =
                            else true) cards
 
     List.filter (fun card ->
-        if card.Unique && not card.Personal // TODO: Handle #49 (Don't assign the same rule multiple times to one player)
+        if card.Unique && not card.Personal
         then (List.filter (fun (activeCard, _) -> card.Unique && (activeCard = card)) model.ActiveCards).Length = 0
         else true) cards
 
@@ -310,7 +298,7 @@ let update (msg: Msg) (model: Model) =
     | RemovePlayer player ->
         let players = (List.filter (fun p -> p <> player) model.Players)
         let activeCards =
-            List.filter (fun (card, p) -> not (Player.compareOption p (Some player))) model.ActiveCards
+            List.filter (fun (_, p) -> not (Player.compareOption p (Some player))) model.ActiveCards
 
         { model with
               Players = players
@@ -344,7 +332,7 @@ let update (msg: Msg) (model: Model) =
     | DecrementPlayerRoundCards ->
         { model with
               ActiveCards =
-                  List.filter (fun (c, p) -> (c.Rounds <> 0 || c.Uses > 0))
+                  List.filter (fun (c, _) -> (c.Rounds <> 0 || c.Uses > 0))
                       (List.map (fun (c, p) ->
                           (if Player.compareOption model.CurrentPlayer p
                            then { c with Rounds = c.Rounds - 1 }
@@ -492,7 +480,10 @@ let settings model dispatch =
                                             [ Name "language"
                                               ClassName "m-1 w-100 col"
                                               Id "language" ]
-                                            (List.map (fun language -> option [ Selected (language = model.Settings.Language)  ] [ str language ]) allowedLanguages) ] ] ]
+                                            (List.map
+                                                (fun language ->
+                                                    option [ Selected(language = model.Settings.Language) ]
+                                                        [ str language ]) allowedLanguages) ] ] ]
                       div [ ClassName "modal-footer" ]
                           [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
                             button
