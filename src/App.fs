@@ -600,7 +600,7 @@ let displayCurrentCard model dispatch =
                 (if model.CurrentCard.IsSome && model.CurrentCard.Value.Personal then
                     span
                         [ ClassName "badge badge-secondary ml-2"
-                          Style [ FontSize "0.9rem" ] ] [ str "personal" ]
+                          Style [ FontSize "0.9rem" ] ] [ str (getKey (model.Settings.Language) "PERSONAL_CARD_INDICATOR") ]
                  else
                      span [] []) ] ]
 
