@@ -591,18 +591,19 @@ let displayCurrentCard model dispatch =
                                    if model.Counter = 0
                                    then (getKey (model.Settings.Language) "CLICK_TO_START")
                                    else (getKey (model.Settings.Language) "NO_CARDS_LEFT")) ] ]
-                button
-                    [ ClassName "btn btn-secondary d-none d-md-block d-lg-block d-xl-block"
-                      Disabled model.CurrentCard.IsNone
-                      OnClick(fun _ ->
-                          if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
-                    [ str (getKey (model.Settings.Language) "DELETE_CARD_FROM_SESSION") ]
-                (if model.CurrentCard.IsSome && model.CurrentCard.Value.Personal then
-                    span
-                        [ ClassName "badge badge-secondary ml-2"
-                          Style [ FontSize "0.9rem" ] ] [ str (getKey (model.Settings.Language) "PERSONAL_CARD_INDICATOR") ]
-                 else
-                     span [] []) ] ]
+                div [ ClassName "row" ] [
+                    button
+                        [ ClassName "btn btn-secondary d-none d-md-block d-lg-block d-xl-block mr-2"
+                          Disabled model.CurrentCard.IsNone
+                          OnClick(fun _ ->
+                              if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
+                        [ str (getKey (model.Settings.Language) "DELETE_CARD_FROM_SESSION") ]
+                    (if model.CurrentCard.IsSome && model.CurrentCard.Value.Personal then
+                        span
+                            [ ClassName "badge badge-secondary m-2"
+                              Style [ FontSize "0.9rem" ] ] [ str (getKey (model.Settings.Language) "PERSONAL_CARD_INDICATOR") ]
+                     else
+                         span [] []) ] ] ]
 
 let progressBarHeader model =
     [ div [ ClassName "progress" ]
