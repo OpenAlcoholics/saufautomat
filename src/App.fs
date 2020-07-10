@@ -557,7 +557,7 @@ let displayPlayer player model dispatch =
                           [ str (getKey (model.Settings.Language) "PLAYER_DELETE") ] ] ] ]
 
 let sidebar (model: Model) dispatch =
-    div [ ClassName "col-md-2 sidebar col h-100 d-none d-md-block d-lg-block d-xl-block" ]
+    div [ ClassName "col-lg-2 sidebar col h-100 d-none d-lg-block d-xl-block" ]
         [ div [ ClassName "form-group" ]
               [ input
                   [ Name "add-player-field"
