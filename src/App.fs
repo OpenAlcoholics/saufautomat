@@ -237,10 +237,10 @@ let update (msg: Msg) (model: Model) =
     | AdvanceTurn ->
         model,
         Cmd.ofSub (fun dispatch ->
-            do dispatch IncrementCounter
+            do dispatch PlayAudio
+               dispatch IncrementCounter
                dispatch ChangeActivePlayer
                dispatch ChangeActiveCard
-               dispatch PlayAudio
                dispatch DecrementPlayerRoundCards
                if roundHasEnded model then dispatch AdvanceRound)
     | PlayAudio ->
