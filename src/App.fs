@@ -635,7 +635,7 @@ let displayInformationHeader model =
 
     div
         [ Id "active-player-header"
-          ClassName "text-center col text-truncate h3 d-none d-md-block d-lg-block d-xl-block" ]
+          ClassName "text-center col text-truncate h3 d-none d-lg-block d-xl-block" ]
         (joinHtmlElements separator elements)
 
 let addNoteToActiveCardModal card model dispatch =
@@ -727,16 +727,17 @@ let view (model: Model) dispatch =
                     [ audio
                         [ Id "nextround-audio"
                           Src "/nextround.mp3" ] [] ]
-                div [ ClassName "col-1" ]
-                    [ button
-                        [ ClassName "btn btn-primary m-1"
-                          DataToggle "modal"
-                          DataTarget "#settings" ] [ str (getKey (model.Settings.Language) "SETTINGS") ]
-                      button
-                          [ ClassName "btn btn-primary ml-1"
-                            OnClick(fun _ -> dispatch Reset) ] [ str (getKey (model.Settings.Language) "RESET") ] ]
+                div [ ClassName "col-sm-8 col-md-8 col-lg-2" ]
+                    [ div [ ClassName "row" ] [
+                        button
+                            [ ClassName "btn btn-primary m-1"
+                              DataToggle "modal"
+                              DataTarget "#settings" ] [ str (getKey (model.Settings.Language) "SETTINGS") ]
+                        button
+                            [ ClassName "btn btn-primary m-1"
+                              OnClick(fun _ -> dispatch Reset) ] [ str (getKey (model.Settings.Language) "RESET") ] ] ]
                 displayInformationHeader model
-                span [ ClassName "text-secondary d-none d-md-block d-lg-block d-xl-block" ]
+                span [ ClassName "text-secondary col-2" ]
                     [ str (sprintf "%s: saufautomat@carstens.tech" (getKey (model.Settings.Language) "CONTACT")) ] ]
           div
               [ ClassName "row m-2"
