@@ -3,9 +3,11 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-      <Compile Include="Resources.fs" />
       <Compile Include="Card.fs" />
       <Compile Include="Player.fs" />
+      <Compile Include="Model.fs" />
+      <Compile Include="Helper.fs" />
+      <Compile Include="Resources.fs" />
       <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>

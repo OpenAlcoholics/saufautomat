@@ -6,69 +6,20 @@ module App
 *)
 
 open Card
+open Browser
 open Elmish
 open Elmish.React
-open Browser
 open Fable.Core
 open Fable.React
 open Fable.React.Props
+open Helper
+open Model
 open Player
 open Resources
 open System.Text.RegularExpressions
 open Thoth.Fetch
 
 // MODEL
-
-type Settings =
-    { MinimumSips: int
-      MaximumSips: int
-      Remote: bool
-      Audio: bool
-      Language: string }
-
-type RoundInformation =
-    { CardsToPlay: int
-      InitialPlayerIndex: int }
-
-type Model =
-    { Players: Player.Type list
-      ActiveCards: (Card.Type * Player.Type option) list
-      CurrentCard: Card.Type option
-      Cards: Card.Type list
-      CurrentPlayer: Player.Type option
-      Counter: int
-      DisplayPlayerNameDuplicateError: bool
-      InitialLoad: bool
-      Settings: Settings
-      Round: int
-      RoundInformation: RoundInformation }
-
-type Msg =
-    | InitialLoad
-    | ChangeActiveCard
-    | ChangeActivePlayer
-    | IncrementCounter
-    | AddActiveCard of Card.Type * Player.Type option
-    | AddCards of Card.RawType list
-    | AddPlayer of Player.Type
-    | RemovePlayer of Player.Type
-    | TogglePlayerActivity of Player.Type
-    | DisplayPlayerNameDuplicate
-    | HidePlayerNameDuplicate
-    | DecrementActiveRoundCards
-    | DecrementPlayerRoundCards
-    | UseActiveCard of Card.Type * Player.Type
-    | SaveSettings
-    | ChangeAudioSetting
-    | ChangeRemoteSetting
-    | Reset
-    | AdvanceTurn
-    | AdvanceRound
-    | ChangeLanguage of string
-    | PlayAudio
-    | RemoveActiveCard of Card.Type
-    | RemoveCardFromSession of Card.Type
-    | AddNoteToActiveCard of Card.Type
 
 let getCards language dispatch =
     promise {
@@ -90,29 +41,6 @@ let stop id =
     ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).pause()
     assignCurrentTime ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement) "0.0"
 
-let findCookieValue (name: string): string option =
-    let kvArrToPair (kvArr: string []): string * string =
-        match kvArr with
-        | [| k; v |] -> (k, v)
-        | _ -> ("", "")
-
-    let rawCookies: string = Browser.Dom.document.cookie
-    rawCookies.Split ';'
-    |> Array.map (fun (s: string) -> s.Trim().Split '=' |> kvArrToPair)
-    |> Map.ofArray
-    |> Map.tryFind name
-
-type HtmlAttr =
-    | [<CompiledName("aria-valuenow")>] AriaValueNow of string
-    | [<CompiledName("aria-valuemin")>] AriaValueMin of string
-    | [<CompiledName("aria-valuemax")>] AriaValueMax of string
-    | [<CompiledName("data-toggle")>] DataToggle of string
-    | [<CompiledName("data-target")>] DataTarget of string
-    | [<CompiledName("data-dismiss")>] DataDismiss of string
-    | [<CompiledName("type")>] InputType of string
-    | [<CompiledName("for")>] For of string
-    interface IHTMLProp
-
 let init (): Model * Cmd<Msg> =
     { Players = List.empty
       ActiveCards = List.empty
@@ -133,14 +61,6 @@ let init (): Model * Cmd<Msg> =
       RoundInformation =
           { CardsToPlay = 0
             InitialPlayerIndex = -1 } }, Cmd.Empty
-
-let unwrapMapOrDefault (opt: 'b option) (m: 'b -> 't) (def: 't) =
-    if opt.IsSome then m opt.Value else def
-
-let unwrapOr (opt: 'b option) (def: 'b): 'b =
-    match opt with
-    | Some value -> value
-    | None -> def
 
 let rec findNextActivePlayer (playerList: Player.Type list) model =
     if playerList.Length = 0 then
@@ -506,14 +426,6 @@ let settings model dispatch =
                                   DataDismiss "modal"
                                   OnClick(fun _ -> dispatch SaveSettings) ]
                                 [ str (getKey (model.Settings.Language) "SETTINGS_SAVE") ] ] ] ] ]
-
-let joinHtmlElements (sep: ReactElement) (l: ReactElement list) =
-    Seq.ofList l
-    |> Seq.fold (fun acc y ->
-        if Seq.isEmpty acc
-        then seq { y }
-        else Seq.append acc (Seq.ofList [ sep; y ])) Seq.empty
-    |> List.ofSeq
 
 let addPlayer name model dispatch =
     match List.tryFind ((=) (Player.create name)) model.Players with
