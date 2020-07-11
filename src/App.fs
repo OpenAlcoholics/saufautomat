@@ -19,8 +19,6 @@ open Resources
 open System.Text.RegularExpressions
 open Thoth.Fetch
 
-// MODEL
-
 let getCards language dispatch =
     promise {
         let url =
@@ -639,15 +637,25 @@ let view (model: Model) dispatch =
                     [ audio
                         [ Id "nextround-audio"
                           Src "/nextround.mp3" ] [] ]
-                div [ ClassName "col-sm-8 col-md-8 col-lg-2" ]
-                    [ div [ ClassName "row" ] [
+                div [ ClassName "col-sm-8 col-lg-2" ]
+                    [ div [ ClassName "" ] [
                         button
                             [ ClassName "btn btn-primary m-1"
                               DataToggle "modal"
                               DataTarget "#settings" ] [ str (getKey (model.Settings.Language) "SETTINGS") ]
                         button
                             [ ClassName "btn btn-primary m-1"
-                              OnClick(fun _ -> dispatch Reset) ] [ str (getKey (model.Settings.Language) "RESET") ] ] ]
+                              OnClick(fun _ -> dispatch Reset) ] [ str (getKey (model.Settings.Language) "RESET")]
+                        (match navigator.userAgent.Contains "Android" with
+                        | true ->
+                            a [ ClassName "d-sm-block d-lg-none m-1"
+                                Href "https://play.google.com/store/apps/details?id=group.openalcoholics.sam" ]
+                              [ img [
+                                    Alt (getKey (model.Settings.Language) "GOOGLE_PLAY_IMG_ALT")
+                                    Src (sprintf "google-play-badge_%s.png" model.Settings.Language)
+                                    Style [ Height "40%"
+                                            Width "40%" ] ] ]
+                        | false -> span [ ] [ ]) ] ]
                 displayInformationHeader model
                 span [ ClassName "text-secondary col-2" ]
                     [ str (sprintf "%s: saufautomat@carstens.tech" (getKey (model.Settings.Language) "CONTACT")) ] ]
