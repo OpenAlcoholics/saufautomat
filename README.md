@@ -6,7 +6,7 @@ If you want this on an android smartphone, take a look at [OpenAlcoholics/saufau
 
 ## Tasks
 
-Tasks are currently only available in german, if you want contribute some english tasks you can do this in OpenAlcoholics/drinking-game-cards.
+Tasks are currently only curated in german, if you want to contribute some english tasks/fix them up you can do this in OpenAlcoholics/drinking-game-cards.
 
 ## Building
 
