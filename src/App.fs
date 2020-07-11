@@ -230,7 +230,6 @@ let update (msg: Msg) (model: Model) =
          then Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
          else Cmd.Empty)
     | TogglePlayerActivity player ->
-
         { model with
               Players =
                   (List.map (fun p ->
@@ -327,6 +326,7 @@ let update (msg: Msg) (model: Model) =
         { model with Cards = List.filter (fun c -> card <> c) model.Cards },
         Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
     | ChangeLanguage language ->
+        ((Browser.Dom.window.document.getElementsByTagName "html").Item 0).setAttribute ("lang", language)
         { model with
               Settings = { model.Settings with Language = language }
               ActiveCards = [] }, Cmd.ofSub (fun dispatch -> getCards language dispatch |> Promise.start)
