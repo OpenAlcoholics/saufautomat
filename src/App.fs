@@ -318,7 +318,7 @@ let update (msg: Msg) (model: Model) =
                   Round = model.Round + 1
                   RoundInformation =
                       { CardsToPlay = (Player.getActive model.Players).Length - 1
-                        InitialPlayerIndex = (unwrapOr (Player.getIndex model.CurrentPlayer model.Players) 0) - 1 } }
+                        InitialPlayerIndex = (unwrapOr (Player.getIndex model.CurrentPlayer model.Players) 1) - 1 } }
          else
              model), Cmd.Empty
     | RemoveActiveCard card ->
