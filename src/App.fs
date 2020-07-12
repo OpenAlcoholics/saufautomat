@@ -357,7 +357,7 @@ let settings model dispatch =
                           [ div [ ClassName "form-group container" ]
                                 [ div [ ClassName "row" ]
                                       [ label
-                                          [ For "minimum-sips"
+                                          [ HtmlFor "minimum-sips"
                                             ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_MINIMUM_SIPS") ]
                                         input
@@ -370,7 +370,7 @@ let settings model dispatch =
                                               Pattern "\d{1,2}" ] ]
                                   div [ ClassName "row" ]
                                       [ label
-                                          [ For "maximum-sips"
+                                          [ HtmlFor "maximum-sips"
                                             ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_MAXIMUM_SIPS") ]
                                         input
@@ -383,7 +383,7 @@ let settings model dispatch =
                                               Pattern "\d{1,2}" ] ]
                                   div [ ClassName "row" ]
                                       [ label
-                                          [ For "remote"
+                                          [ HtmlFor "remote"
                                             ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_REMOTE") ]
                                         input
@@ -392,10 +392,10 @@ let settings model dispatch =
                                               InputType "checkbox"
                                               ClassName "m-1 w-100 col"
                                               Id "remote"
-                                              Checked(model.Settings.Remote) ] ]
+                                              DefaultChecked(model.Settings.Remote) ] ]
                                   div [ ClassName "row" ]
                                       [ label
-                                          [ For "audio"
+                                          [ HtmlFor "audio"
                                             ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_AUDIO") ]
                                         input
@@ -404,19 +404,20 @@ let settings model dispatch =
                                               InputType "checkbox"
                                               ClassName "m-1 w-100 col"
                                               Id "audio"
-                                              Checked(model.Settings.Audio) ] ]
+                                              DefaultChecked(model.Settings.Audio) ] ]
                                   div [ ClassName "row" ]
                                       [ label
-                                          [ For "language"
+                                          [ HtmlFor "language"
                                             ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_LANGUAGE") ]
                                         select
                                             [ Name "language"
                                               ClassName "m-1 w-100 col"
-                                              Id "language" ]
+                                              Id "language"
+                                              DefaultValue model.Settings.Language ]
                                             (List.map
                                                 (fun language ->
-                                                    option [ Selected(language = model.Settings.Language) ]
+                                                    option [  ]
                                                         [ str language ]) allowedLanguages) ] ] ]
                       div [ ClassName "modal-footer" ]
                           [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
