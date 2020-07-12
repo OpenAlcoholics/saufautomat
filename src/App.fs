@@ -253,11 +253,14 @@ let update (msg: Msg) (model: Model) =
               ActiveCards =
                   List.filter (fun (c, _) -> (c.Rounds <> 0 || c.Uses > 0))
                       (List.map (fun (card, player) ->
-                          (if Player.compareOption model.CurrentPlayer player
-                           then { card with Rounds = if card.Rounds > 0 && card.Uses = 0 && player.IsNone
-                                                     then card.Rounds - 1
-                                                     else card.Rounds }
-                           else card), player) model.ActiveCards) }, Cmd.Empty
+                          (if Player.compareOption model.CurrentPlayer player then
+                              { card with
+                                    Rounds =
+                                        if card.Rounds > 0 && card.Uses = 0 && player.IsNone
+                                        then card.Rounds - 1
+                                        else card.Rounds }
+                           else
+                               card), player) model.ActiveCards) }, Cmd.Empty
     | UseActiveCard (card, player) ->
         { model with
               ActiveCards =
@@ -324,15 +327,15 @@ let update (msg: Msg) (model: Model) =
         { model with Cards = List.filter (fun c -> card <> c) model.Cards },
         Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
     | ChangeLanguage language ->
-        ((Browser.Dom.window.document.getElementsByTagName "html").Item 0).setAttribute ("lang", language)
+        ((Browser.Dom.window.document.getElementsByTagName "html").Item 0).setAttribute("lang", language)
         { model with
               Settings = { model.Settings with Language = language }
               ActiveCards = [] }, Cmd.ofSub (fun dispatch -> getCards language dispatch |> Promise.start)
     | AddNoteToActiveCard card ->
         let note =
             match ((Browser.Dom.window.document.getElementById "activecardnote") :?> Browser.Types.HTMLInputElement).value with
-             | "" -> None
-             | value -> Some value
+            | "" -> None
+            | value -> Some value
         { model with
               ActiveCards =
                   List.map (fun (c, player) ->
@@ -504,19 +507,21 @@ let displayCurrentCard model dispatch =
                                    if model.Counter = 0
                                    then (getKey (model.Settings.Language) "CLICK_TO_START")
                                    else (getKey (model.Settings.Language) "NO_CARDS_LEFT")) ] ]
-                div [ ClassName "row" ] [
-                    button
+                div [ ClassName "row" ]
+                    [ button
                         [ ClassName "btn btn-secondary d-none d-md-block d-lg-block d-xl-block mr-2"
                           Disabled model.CurrentCard.IsNone
                           OnClick(fun _ ->
-                              if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
-                        [ str (getKey (model.Settings.Language) "DELETE_CARD_FROM_SESSION") ]
-                    (if model.CurrentCard.IsSome && model.CurrentCard.Value.Personal then
-                        span
-                            [ ClassName "badge badge-secondary m-2"
-                              Style [ FontSize "0.9rem" ] ] [ str (getKey (model.Settings.Language) "PERSONAL_CARD_INDICATOR") ]
-                     else
-                         span [] []) ] ] ]
+                              if model.CurrentCard.IsSome then
+                                  RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
+                          [ str (getKey (model.Settings.Language) "DELETE_CARD_FROM_SESSION") ]
+                      (if model.CurrentCard.IsSome && model.CurrentCard.Value.Personal then
+                          span
+                              [ ClassName "badge badge-secondary m-2"
+                                Style [ FontSize "0.9rem" ] ]
+                              [ str (getKey (model.Settings.Language) "PERSONAL_CARD_INDICATOR") ]
+                       else
+                           span [] []) ] ] ]
 
 let progressBarHeader model =
     [ div [ ClassName "progress" ]
@@ -558,19 +563,19 @@ let addNoteToActiveCardModal card model dispatch =
               [ div [ ClassName "modal-content" ]
                     [ div [ ClassName "modal-body" ]
                           [ div [ ClassName "form-group container" ]
-                                [ div [ ClassName "row" ] [
-                                    input
-                                            [ Name "note"
-                                              ClassName "m-1 w-100 col"
-                                              Id "activecardnote"
-                                              Placeholder (unwrapOr card.Note "Enter a note here...")
-                                              InputType "text" ] ] ] ]
+                                [ div [ ClassName "row" ]
+                                      [ input
+                                          [ Name "note"
+                                            ClassName "m-1 w-100 col"
+                                            Id "activecardnote"
+                                            Placeholder(unwrapOr card.Note "Enter a note here...")
+                                            InputType "text" ] ] ] ]
                       div [ ClassName "modal-footer" ]
-                        [ button
-                            [ ClassName "btn btn-primary"
-                              DataDismiss "modal"
-                              OnClick(fun _ -> AddNoteToActiveCard card |> dispatch) ]
-                            [ str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE") ] ] ] ] ]
+                          [ button
+                              [ ClassName "btn btn-primary"
+                                DataDismiss "modal"
+                                OnClick(fun _ -> AddNoteToActiveCard card |> dispatch) ]
+                                [ str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE") ] ] ] ] ]
 
 let displayActiveCard (card, player: Player.Type option) model dispatch =
     div
@@ -584,28 +589,28 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
               [ str
                   ((if player.IsSome then (sprintf "[%s] " player.Value.Name) else "") + card.Text
                    + (if card.Rounds > 0 && card.Uses = 0 then (sprintf " (%d)" card.Rounds) else "")) ]
-          div [ ClassName "card-body text-center mb-2" ] [
-                  (match card.Note with
-                   | Some value -> h6 [ ] [ em [  ] [str value ] ]
-                   | None -> span [] []
-                  )
-                  (if card.Uses > 0 && player.IsSome then
-                      button
-                          [ ClassName "btn btn-primary mb-1 w-100"
-                            OnClick(fun _ -> UseActiveCard(card, player.Value) |> dispatch) ]
-                          [ str (sprintf "%s (%d)" (getKey (model.Settings.Language) "ACTIVE_CARD_USE") card.Uses) ]
-                   else
-                       span [] [])
-                  button
-                      [ ClassName "btn btn-primary mr-1"
-                        Style [ Width "49%" ]
-                        OnClick(fun _ -> RemoveActiveCard card |> dispatch) ]
-                      [ str (getKey (model.Settings.Language) "ACTIVE_CARD_DELETE") ]
-                  button
-                        [ ClassName "btn btn-primary"
-                          Style [ Width "49%" ]
-                          DataToggle "modal"
-                          DataTarget "#activecardnotemodal" ] [ str (getKey (model.Settings.Language) "ACTIVE_CARD_ADD_NOTE") ] ] ]
+          div [ ClassName "card-body text-center mb-2" ]
+              [ (match card.Note with
+                 | Some value -> h6 [] [ em [] [ str value ] ]
+                 | None -> span [] [])
+                (if card.Uses > 0 && player.IsSome then
+                    button
+                        [ ClassName "btn btn-primary mb-1 w-100"
+                          OnClick(fun _ -> UseActiveCard(card, player.Value) |> dispatch) ]
+                        [ str (sprintf "%s (%d)" (getKey (model.Settings.Language) "ACTIVE_CARD_USE") card.Uses) ]
+                 else
+                     span [] [])
+                button
+                    [ ClassName "btn btn-primary mr-1"
+                      Style [ Width "49%" ]
+                      OnClick(fun _ -> RemoveActiveCard card |> dispatch) ]
+                    [ str (getKey (model.Settings.Language) "ACTIVE_CARD_DELETE") ]
+                button
+                    [ ClassName "btn btn-primary"
+                      Style [ Width "49%" ]
+                      DataToggle "modal"
+                      DataTarget "#activecardnotemodal" ]
+                    [ str (getKey (model.Settings.Language) "ACTIVE_CARD_ADD_NOTE") ] ] ]
 
 let activeCards (model: Model) dispatch =
     div
@@ -636,24 +641,27 @@ let view (model: Model) dispatch =
                         [ Id "nextround-audio"
                           Src "/nextround.mp3" ] [] ]
                 div [ ClassName "col-sm-8 col-lg-2" ]
-                    [ div [ ClassName "" ] [
-                        button
-                            [ ClassName "btn btn-primary m-1"
-                              DataToggle "modal"
-                              DataTarget "#settings" ] [ str (getKey (model.Settings.Language) "SETTINGS") ]
-                        button
-                            [ ClassName "btn btn-primary m-1"
-                              OnClick(fun _ -> dispatch Reset) ] [ str (getKey (model.Settings.Language) "RESET")]
-                        (match navigator.userAgent.Contains "Android" with
-                        | true ->
-                            a [ ClassName "d-sm-block d-lg-none m-1"
-                                Href "https://play.google.com/store/apps/details?id=group.openalcoholics.sam" ]
-                              [ img [
-                                    Alt (getKey (model.Settings.Language) "GOOGLE_PLAY_IMG_ALT")
-                                    Src (sprintf "google-play-badge_%s.png" model.Settings.Language)
-                                    Style [ Height "40%"
-                                            Width "40%" ] ] ]
-                        | false -> span [ ] [ ]) ] ]
+                    [ div [ ClassName "" ]
+                          [ button
+                              [ ClassName "btn btn-primary m-1"
+                                DataToggle "modal"
+                                DataTarget "#settings" ] [ str (getKey (model.Settings.Language) "SETTINGS") ]
+                            button
+                                [ ClassName "btn btn-primary m-1"
+                                  OnClick(fun _ -> dispatch Reset) ]
+                                [ str (getKey (model.Settings.Language) "RESET") ]
+                            (match navigator.userAgent.Contains "Android" with
+                             | true ->
+                                 a
+                                     [ ClassName "d-sm-block d-lg-none m-1"
+                                       Href "https://play.google.com/store/apps/details?id=group.openalcoholics.sam" ]
+                                     [ img
+                                         [ Alt(getKey (model.Settings.Language) "GOOGLE_PLAY_IMG_ALT")
+                                           Src(sprintf "google-play-badge_%s.png" model.Settings.Language)
+                                           Style
+                                               [ Height "40%"
+                                                 Width "40%" ] ] ]
+                             | false -> span [] []) ] ]
                 displayInformationHeader model
                 span [ ClassName "text-secondary col-2" ]
                     [ str (sprintf "%s: saufautomat@carstens.tech" (getKey (model.Settings.Language) "CONTACT")) ] ]
