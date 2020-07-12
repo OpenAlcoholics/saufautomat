@@ -218,15 +218,23 @@ let update (msg: Msg) (model: Model) =
         | Some _ -> Cmd.Empty
         | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
     | RemovePlayer player ->
+        let isCurrentPlayer = Player.isCurrent player model.CurrentPlayer
         let players = (List.filter (fun p -> p <> player) model.Players)
         let activeCards =
             List.filter (fun (_, p) -> not (Player.compareOption p (Some player))) model.ActiveCards
 
+        let playerIndex = unwrapOr (Player.getIndex (Some player) model.Players) 0
+        let currentPlayerIndex = unwrapOr (Player.getIndex model.CurrentPlayer model.Players) 0
+        let cardsToPlayModifier = match (playerIndex > model.RoundInformation.InitialPlayerIndex && playerIndex < model.Players.Length && playerIndex < currentPlayerIndex)
+                                        || (playerIndex < model.RoundInformation.InitialPlayerIndex && playerIndex < currentPlayerIndex) with
+                                  | true -> 0
+                                  | false -> -1
+
         { model with
               Players = players
               ActiveCards = activeCards
-              RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - 1 } },
-        (if (Player.isCurrent player model.CurrentPlayer)
+              RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay + cardsToPlayModifier } },
+        (if isCurrentPlayer
          then Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
          else Cmd.Empty)
     | TogglePlayerActivity player ->
