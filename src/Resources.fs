@@ -16,7 +16,7 @@ let english =
         Add("ADD_PLAYER", "Add player").
         Add("PLAYER_SUSPEND_ON", "Suspend").
         Add("PLAYER_SUSPEND_OFF", "Unsuspend").
-        Add("PLAYER_DELETE", "DELETE").
+        Add("PLAYER_DELETE", "Delete").
         Add("ACTIVE_CARD_DELETE", "Delete").
         Add("ACTIVE_CARD_USE", "Use").
         Add("RESET", "Reset").
