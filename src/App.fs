@@ -416,7 +416,7 @@ let settings model dispatch =
                                                     option [ Selected(language = model.Settings.Language) ]
                                                         [ str language ]) allowedLanguages) ] ] ]
                       div [ ClassName "modal-footer" ]
-                          [ span [ ClassName "text-secondary" ] [ str "v1.0.0" ]
+                          [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
                             button
                                 [ ClassName "btn btn-primary"
                                   DataDismiss "modal"
