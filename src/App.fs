@@ -29,16 +29,6 @@ let getCards language dispatch =
         AddCards res |> dispatch
     }
 
-let play id =
-    ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).play()
-
-[<Emit("$0.currentTime = $2")>]
-let assignCurrentTime element value = jsNative
-
-let stop id =
-    ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).pause()
-    assignCurrentTime ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement) "0.0"
-
 let init (): Model * Cmd<Msg> =
     { Players = List.empty
       ActiveCards = List.empty

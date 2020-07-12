@@ -1,5 +1,6 @@
 module Helper
 
+open Fable.Core
 open Fable.React
 open Fable.React.Props
 
@@ -41,3 +42,13 @@ let joinHtmlElements (sep: ReactElement) (l: ReactElement list) =
         then seq { y }
         else Seq.append acc (Seq.ofList [ sep; y ])) Seq.empty
     |> List.ofSeq
+
+let play id =
+    ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).play()
+
+[<Emit("$0.currentTime = $2")>]
+let assignCurrentTime element value = jsNative
+
+let stop id =
+    ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).pause()
+    assignCurrentTime ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement) "0.0"
