@@ -665,7 +665,11 @@ let view (model: Model) dispatch =
                              | false -> span [] []) ] ]
                 displayInformationHeader model
                 span [ ClassName "text-secondary col-2" ]
-                    [ str (sprintf "%s: saufautomat@carstens.tech" (getKey (model.Settings.Language) "CONTACT")) ] ]
+                    [ str (sprintf "%s: " (getKey (model.Settings.Language) "CONTACT"))
+                      a [ Id "contactlink"
+                          Href "mailto:saufautomat@carstens.tech"
+                          ClassName "text-secondary" ] [ str "saufautomat@carstens.tech" ]
+                    ] ]
           div
               [ ClassName "row m-2"
                 Style [ Height "65%" ] ]
