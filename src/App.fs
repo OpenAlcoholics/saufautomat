@@ -524,16 +524,6 @@ let displayCurrentCard model dispatch =
                        else
                            span [] []) ] ] ]
 
-let progressBarHeader model =
-    [ div [ ClassName "progress" ]
-          [ div
-              [ ClassName "progress-bar"
-                Role "progressbar"
-                Style([ Width(sprintf "%d%%" ((model.Counter * 100 / model.Cards.Length))) ])
-                AriaValueNow(sprintf "%d" model.Counter)
-                AriaValueMin "0"
-                AriaValueMax(sprintf "%d" model.Cards.Length) ] [] ] ]
-
 let displayInformationHeader model =
     let separator: ReactElement = span [] [ str " | " ]
 
