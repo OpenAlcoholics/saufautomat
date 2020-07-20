@@ -142,7 +142,8 @@ let update (msg: Msg) (model: Model) =
                dispatch ChangeActivePlayer
                dispatch ChangeActiveCard
                dispatch DecrementPlayerRoundCards
-               if roundHasEnded model then dispatch AdvanceRound)
+               if roundHasEnded model then dispatch AdvanceRound
+                                           dispatch DecrementActiveRoundCards)
     | PlayAudio ->
         if model.Settings.Audio then
             let audioId =
