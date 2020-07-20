@@ -259,7 +259,7 @@ let update (msg: Msg) (model: Model) =
                           (if Player.compareOption model.CurrentPlayer player then
                               { card with
                                     Rounds =
-                                        if card.Rounds > 0 && card.Uses = 0 && player.IsNone
+                                        if card.Rounds > 0 && card.Uses = 0 && player.IsSome
                                         then card.Rounds - 1
                                         else card.Rounds }
                            else
