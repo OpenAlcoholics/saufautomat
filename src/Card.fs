@@ -20,7 +20,8 @@ type Type =
       Personal: bool
       Remote: bool
       Unique: bool
-      Note: string option }
+      Note: string option
+      StartingRound: int option }
     override this.Equals(other) =
         match other with
         | :? Type as other ->
@@ -40,6 +41,7 @@ let Into raw =
             Remote = raw.remote
             Unique = raw.unique
             Note = None
+            StartingRound = None
         }
 
 let decreaseCount card cards =

@@ -237,7 +237,8 @@ let update (msg: Msg) (model: Model) =
          else Cmd.Empty)
     | DisplayPlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = true }, Cmd.Empty
     | HidePlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = false }, Cmd.Empty
-    | AddActiveCard (card, player) -> { model with ActiveCards = (card, player) :: model.ActiveCards }, Cmd.Empty
+    | AddActiveCard (card, player) ->
+        { model with ActiveCards = ({ card with StartingRound = if card.Rounds > 0 then Some model.Round else None }, player) :: model.ActiveCards }, Cmd.Empty
     | DecrementActiveRoundCards ->
         { model with
               ActiveCards =
@@ -269,7 +270,8 @@ let update (msg: Msg) (model: Model) =
                       && not (card.Uses = 1 && card = c && (Player.compareOption (Some player) p)))
                       (List.map (fun (c, p) ->
                           (if card = c && (Player.compareOption (Some player) p)
-                           then { c with Uses = c.Uses - 1 }
+                           then { c with Uses = c.Uses - 1
+                                         StartingRound = Some model.Round }
                            else c), p) model.ActiveCards) },
         Cmd.ofSub (fun dispatch -> AddActiveCard({ card with Uses = 0 }, (Some player)) |> dispatch)
     | ChangeRemoteSetting ->
@@ -583,6 +585,9 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
           div [ ClassName "card-body text-center mb-2" ]
               [ (match card.Note with
                  | Some value -> h6 [] [ em [] [ str value ] ]
+                 | None -> span [] [])
+                (match card.StartingRound with
+                 | Some value -> h6 [ ] [ em [ ] [ str (sprintf "Started in round: %d" value) ] ]
                  | None -> span [] [])
                 (if card.Uses > 0 && player.IsSome then
                     button
