@@ -239,6 +239,7 @@ let update (msg: Msg) (model: Model) =
     | DisplayPlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = true }, Cmd.Empty
     | HidePlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = false }, Cmd.Empty
     | AddActiveCard (card, player) ->
+        let player = if card.Personal then player else None
         { model with ActiveCards = ({ card with StartingRound = if card.Rounds > 0 then Some model.Round else None }, player) :: model.ActiveCards }, Cmd.Empty
     | DecrementActiveRoundCards ->
         { model with
