@@ -9,3 +9,7 @@ body {
 .toggle-button:hover {
     background-color: #F39C12 !important;
 }
+
+#contactlink:hover {
+    color: #777 !important;
+}

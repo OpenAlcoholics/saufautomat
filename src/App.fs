@@ -6,69 +6,18 @@ module App
 *)
 
 open Card
+open Browser
 open Elmish
 open Elmish.React
-open Browser
 open Fable.Core
 open Fable.React
 open Fable.React.Props
+open Helper
+open Model
 open Player
 open Resources
 open System.Text.RegularExpressions
 open Thoth.Fetch
-
-// MODEL
-
-type Settings =
-    { MinimumSips: int
-      MaximumSips: int
-      Remote: bool
-      Audio: bool
-      Language: string }
-
-type RoundInformation =
-    { CardsToPlay: int
-      InitialPlayerIndex: int }
-
-type Model =
-    { Players: Player.Type list
-      ActiveCards: (Card.Type * Player.Type option) list
-      CurrentCard: Card.Type option
-      Cards: Card.Type list
-      CurrentPlayer: Player.Type option
-      Counter: int
-      DisplayPlayerNameDuplicateError: bool
-      InitialLoad: bool
-      Settings: Settings
-      Round: int
-      RoundInformation: RoundInformation }
-
-type Msg =
-    | InitialLoad
-    | ChangeActiveCard
-    | ChangeActivePlayer
-    | IncrementCounter
-    | AddActiveCard of Card.Type * Player.Type option
-    | AddCards of Card.RawType list
-    | AddPlayer of Player.Type
-    | RemovePlayer of Player.Type
-    | TogglePlayerActivity of Player.Type
-    | DisplayPlayerNameDuplicate
-    | HidePlayerNameDuplicate
-    | DecrementActiveRoundCards
-    | DecrementPlayerRoundCards
-    | UseActiveCard of Card.Type * Player.Type
-    | SaveSettings
-    | ChangeAudioSetting
-    | ChangeRemoteSetting
-    | Reset
-    | AdvanceTurn
-    | AdvanceRound
-    | ChangeLanguage of string
-    | PlayAudio
-    | RemoveActiveCard of Card.Type
-    | RemoveCardFromSession of Card.Type
-    | AddNoteToActiveCard of Card.Type
 
 let getCards language dispatch =
     promise {
@@ -79,39 +28,6 @@ let getCards language dispatch =
         let! res = Fetch.get (url)
         AddCards res |> dispatch
     }
-
-let play id =
-    ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).play()
-
-[<Emit("$0.currentTime = $2")>]
-let assignCurrentTime element value = jsNative
-
-let stop id =
-    ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).pause()
-    assignCurrentTime ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement) "0.0"
-
-let findCookieValue (name: string): string option =
-    let kvArrToPair (kvArr: string []): string * string =
-        match kvArr with
-        | [| k; v |] -> (k, v)
-        | _ -> ("", "")
-
-    let rawCookies: string = Browser.Dom.document.cookie
-    rawCookies.Split ';'
-    |> Array.map (fun (s: string) -> s.Trim().Split '=' |> kvArrToPair)
-    |> Map.ofArray
-    |> Map.tryFind name
-
-type HtmlAttr =
-    | [<CompiledName("aria-valuenow")>] AriaValueNow of string
-    | [<CompiledName("aria-valuemin")>] AriaValueMin of string
-    | [<CompiledName("aria-valuemax")>] AriaValueMax of string
-    | [<CompiledName("data-toggle")>] DataToggle of string
-    | [<CompiledName("data-target")>] DataTarget of string
-    | [<CompiledName("data-dismiss")>] DataDismiss of string
-    | [<CompiledName("type")>] InputType of string
-    | [<CompiledName("for")>] For of string
-    interface IHTMLProp
 
 let init (): Model * Cmd<Msg> =
     { Players = List.empty
@@ -134,14 +50,6 @@ let init (): Model * Cmd<Msg> =
           { CardsToPlay = 0
             InitialPlayerIndex = -1 } }, Cmd.Empty
 
-let unwrapMapOrDefault (opt: 'b option) (m: 'b -> 't) (def: 't) =
-    if opt.IsSome then m opt.Value else def
-
-let unwrapOr (opt: 'b option) (def: 'b): 'b =
-    match opt with
-    | Some value -> value
-    | None -> def
-
 let rec findNextActivePlayer (playerList: Player.Type list) model =
     if playerList.Length = 0 then
         None
@@ -161,7 +69,7 @@ let rec findNextActivePlayer (playerList: Player.Type list) model =
 
 // UPDATE
 
-let int_replacement_regex = Regex("{int(:\s*[a-z]+)?}")
+let int_replacement_regex = Regex("{int(:\s*[a-z]+.*?)?}")
 
 let filterCardsForTurn cards model =
     let distinctCount = (Card.getDistinctCount cards)
@@ -172,13 +80,16 @@ let filterCardsForTurn cards model =
             && if model.Players.Length = 0 then
                 (not card.Personal) && card.Rounds = 0
                else
-                   true && if distinctCount > 1 // TODO: this should be checked after everything else
-                           then card.Id <> (unwrapMapOrDefault model.CurrentCard (fun c -> c.Id) -1)
-                           else true) cards
+                   true) cards
 
-    List.filter (fun card ->
+    let cards = List.filter (fun card ->
         if card.Unique && not card.Personal
         then (List.filter (fun (activeCard, _) -> card.Unique && (activeCard = card)) model.ActiveCards).Length = 0
+        else true) cards
+
+    List.filter (fun card ->
+        if distinctCount > 1
+        then card.Id <> (unwrapMapOrDefault model.CurrentCard (fun c -> c.Id) -1)
         else true) cards
 
 let getNextCard cards model =
@@ -231,7 +142,8 @@ let update (msg: Msg) (model: Model) =
                dispatch ChangeActivePlayer
                dispatch ChangeActiveCard
                dispatch DecrementPlayerRoundCards
-               if roundHasEnded model then dispatch AdvanceRound)
+               if roundHasEnded model then dispatch AdvanceRound
+                                           dispatch DecrementActiveRoundCards)
     | PlayAudio ->
         if model.Settings.Audio then
             let audioId =
@@ -297,19 +209,26 @@ let update (msg: Msg) (model: Model) =
         | Some _ -> Cmd.Empty
         | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
     | RemovePlayer player ->
+        let isCurrentPlayer = Player.isCurrent player model.CurrentPlayer
         let players = (List.filter (fun p -> p <> player) model.Players)
         let activeCards =
             List.filter (fun (_, p) -> not (Player.compareOption p (Some player))) model.ActiveCards
 
+        let playerIndex = unwrapOr (Player.getIndex (Some player) model.Players) 0
+        let currentPlayerIndex = unwrapOr (Player.getIndex model.CurrentPlayer model.Players) 0
+        let cardsToPlayModifier = match (playerIndex > model.RoundInformation.InitialPlayerIndex && playerIndex < model.Players.Length && playerIndex < currentPlayerIndex)
+                                        || (playerIndex < model.RoundInformation.InitialPlayerIndex && playerIndex < currentPlayerIndex) with
+                                  | true -> 0
+                                  | false -> -1
+
         { model with
               Players = players
               ActiveCards = activeCards
-              RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay - 1 } },
-        (if (Player.isCurrent player model.CurrentPlayer)
+              RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay + cardsToPlayModifier } },
+        (if isCurrentPlayer
          then Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
          else Cmd.Empty)
     | TogglePlayerActivity player ->
-
         { model with
               Players =
                   (List.map (fun p ->
@@ -319,7 +238,9 @@ let update (msg: Msg) (model: Model) =
          else Cmd.Empty)
     | DisplayPlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = true }, Cmd.Empty
     | HidePlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = false }, Cmd.Empty
-    | AddActiveCard (card, player) -> { model with ActiveCards = (card, player) :: model.ActiveCards }, Cmd.Empty
+    | AddActiveCard (card, player) ->
+        let player = if card.Personal then player else None
+        { model with ActiveCards = ({ card with StartingRound = if card.Rounds > 0 then Some model.Round else None }, player) :: model.ActiveCards }, Cmd.Empty
     | DecrementActiveRoundCards ->
         { model with
               ActiveCards =
@@ -335,11 +256,14 @@ let update (msg: Msg) (model: Model) =
               ActiveCards =
                   List.filter (fun (c, _) -> (c.Rounds <> 0 || c.Uses > 0))
                       (List.map (fun (card, player) ->
-                          (if Player.compareOption model.CurrentPlayer player
-                           then { card with Rounds = if card.Rounds > 0 && card.Uses = 0 && player.IsNone
-                                                     then card.Rounds - 1
-                                                     else card.Rounds }
-                           else card), player) model.ActiveCards) }, Cmd.Empty
+                          (if Player.compareOption model.CurrentPlayer player then
+                              { card with
+                                    Rounds =
+                                        if card.Rounds > 0 && card.Uses = 0 && player.IsSome
+                                        then card.Rounds - 1
+                                        else card.Rounds }
+                           else
+                               card), player) model.ActiveCards) }, Cmd.Empty
     | UseActiveCard (card, player) ->
         { model with
               ActiveCards =
@@ -348,7 +272,8 @@ let update (msg: Msg) (model: Model) =
                       && not (card.Uses = 1 && card = c && (Player.compareOption (Some player) p)))
                       (List.map (fun (c, p) ->
                           (if card = c && (Player.compareOption (Some player) p)
-                           then { c with Uses = c.Uses - 1 }
+                           then { c with Uses = c.Uses - 1
+                                         StartingRound = Some model.Round }
                            else c), p) model.ActiveCards) },
         Cmd.ofSub (fun dispatch -> AddActiveCard({ card with Uses = 0 }, (Some player)) |> dispatch)
     | ChangeRemoteSetting ->
@@ -397,7 +322,7 @@ let update (msg: Msg) (model: Model) =
                   Round = model.Round + 1
                   RoundInformation =
                       { CardsToPlay = (Player.getActive model.Players).Length - 1
-                        InitialPlayerIndex = (unwrapOr (Player.getIndex model.CurrentPlayer model.Players) 0) - 1 } }
+                        InitialPlayerIndex = (unwrapOr (Player.getIndex model.CurrentPlayer model.Players) 1) - 1 } }
          else
              model), Cmd.Empty
     | RemoveActiveCard card ->
@@ -406,14 +331,15 @@ let update (msg: Msg) (model: Model) =
         { model with Cards = List.filter (fun c -> card <> c) model.Cards },
         Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
     | ChangeLanguage language ->
+        ((Browser.Dom.window.document.getElementsByTagName "html").Item 0).setAttribute("lang", language)
         { model with
               Settings = { model.Settings with Language = language }
               ActiveCards = [] }, Cmd.ofSub (fun dispatch -> getCards language dispatch |> Promise.start)
     | AddNoteToActiveCard card ->
         let note =
             match ((Browser.Dom.window.document.getElementById "activecardnote") :?> Browser.Types.HTMLInputElement).value with
-             | "" -> None
-             | value -> Some value
+            | "" -> None
+            | value -> Some value
         { model with
               ActiveCards =
                   List.map (fun (c, player) ->
@@ -435,7 +361,7 @@ let settings model dispatch =
                           [ div [ ClassName "form-group container" ]
                                 [ div [ ClassName "row" ]
                                       [ label
-                                          [ For "minimum-sips"
+                                          [ HtmlFor "minimum-sips"
                                             ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_MINIMUM_SIPS") ]
                                         input
@@ -448,7 +374,7 @@ let settings model dispatch =
                                               Pattern "\d{1,2}" ] ]
                                   div [ ClassName "row" ]
                                       [ label
-                                          [ For "maximum-sips"
+                                          [ HtmlFor "maximum-sips"
                                             ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_MAXIMUM_SIPS") ]
                                         input
@@ -461,7 +387,7 @@ let settings model dispatch =
                                               Pattern "\d{1,2}" ] ]
                                   div [ ClassName "row" ]
                                       [ label
-                                          [ For "remote"
+                                          [ HtmlFor "remote"
                                             ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_REMOTE") ]
                                         input
@@ -470,10 +396,10 @@ let settings model dispatch =
                                               InputType "checkbox"
                                               ClassName "m-1 w-100 col"
                                               Id "remote"
-                                              Checked(model.Settings.Remote) ] ]
+                                              DefaultChecked(model.Settings.Remote) ] ]
                                   div [ ClassName "row" ]
                                       [ label
-                                          [ For "audio"
+                                          [ HtmlFor "audio"
                                             ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_AUDIO") ]
                                         input
@@ -482,35 +408,28 @@ let settings model dispatch =
                                               InputType "checkbox"
                                               ClassName "m-1 w-100 col"
                                               Id "audio"
-                                              Checked(model.Settings.Audio) ] ]
+                                              DefaultChecked(model.Settings.Audio) ] ]
                                   div [ ClassName "row" ]
                                       [ label
-                                          [ For "language"
+                                          [ HtmlFor "language"
                                             ClassName "col align-self-center" ]
                                             [ str (getKey (model.Settings.Language) "SETTINGS_LANGUAGE") ]
                                         select
                                             [ Name "language"
                                               ClassName "m-1 w-100 col"
-                                              Id "language" ]
+                                              Id "language"
+                                              DefaultValue model.Settings.Language ]
                                             (List.map
                                                 (fun language ->
-                                                    option [ Selected(language = model.Settings.Language) ]
+                                                    option [  ]
                                                         [ str language ]) allowedLanguages) ] ] ]
                       div [ ClassName "modal-footer" ]
-                          [ span [ ClassName "text-secondary" ] [ str "v1.0.0" ]
+                          [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
                             button
                                 [ ClassName "btn btn-primary"
                                   DataDismiss "modal"
                                   OnClick(fun _ -> dispatch SaveSettings) ]
                                 [ str (getKey (model.Settings.Language) "SETTINGS_SAVE") ] ] ] ] ]
-
-let joinHtmlElements (sep: ReactElement) (l: ReactElement list) =
-    Seq.ofList l
-    |> Seq.fold (fun acc y ->
-        if Seq.isEmpty acc
-        then seq { y }
-        else Seq.append acc (Seq.ofList [ sep; y ])) Seq.empty
-    |> List.ofSeq
 
 let addPlayer name model dispatch =
     match List.tryFind ((=) (Player.create name)) model.Players with
@@ -554,7 +473,7 @@ let displayPlayer player model dispatch =
                           [ str (getKey (model.Settings.Language) "PLAYER_DELETE") ] ] ] ]
 
 let sidebar (model: Model) dispatch =
-    div [ ClassName "col-md-2 sidebar col h-100 d-none d-md-block d-lg-block d-xl-block" ]
+    div [ ClassName "col-lg-2 sidebar col h-100 d-none d-lg-block d-xl-block" ]
         [ div [ ClassName "form-group" ]
               [ input
                   [ Name "add-player-field"
@@ -593,29 +512,21 @@ let displayCurrentCard model dispatch =
                                    if model.Counter = 0
                                    then (getKey (model.Settings.Language) "CLICK_TO_START")
                                    else (getKey (model.Settings.Language) "NO_CARDS_LEFT")) ] ]
-                div [ ClassName "row" ] [
-                    button
+                div [ ClassName "row" ]
+                    [ button
                         [ ClassName "btn btn-secondary d-none d-md-block d-lg-block d-xl-block mr-2"
                           Disabled model.CurrentCard.IsNone
                           OnClick(fun _ ->
-                              if model.CurrentCard.IsSome then RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
-                        [ str (getKey (model.Settings.Language) "DELETE_CARD_FROM_SESSION") ]
-                    (if model.CurrentCard.IsSome && model.CurrentCard.Value.Personal then
-                        span
-                            [ ClassName "badge badge-secondary m-2"
-                              Style [ FontSize "0.9rem" ] ] [ str (getKey (model.Settings.Language) "PERSONAL_CARD_INDICATOR") ]
-                     else
-                         span [] []) ] ] ]
-
-let progressBarHeader model =
-    [ div [ ClassName "progress" ]
-          [ div
-              [ ClassName "progress-bar"
-                Role "progressbar"
-                Style([ Width(sprintf "%d%%" ((model.Counter * 100 / model.Cards.Length))) ])
-                AriaValueNow(sprintf "%d" model.Counter)
-                AriaValueMin "0"
-                AriaValueMax(sprintf "%d" model.Cards.Length) ] [] ] ]
+                              if model.CurrentCard.IsSome then
+                                  RemoveCardFromSession model.CurrentCard.Value |> dispatch) ]
+                          [ str (getKey (model.Settings.Language) "DELETE_CARD_FROM_SESSION") ]
+                      (if model.CurrentCard.IsSome && model.CurrentCard.Value.Personal then
+                          span
+                              [ ClassName "badge badge-secondary m-2"
+                                Style [ FontSize "0.9rem" ] ]
+                              [ str (getKey (model.Settings.Language) "PERSONAL_CARD_INDICATOR") ]
+                       else
+                           span [] []) ] ] ]
 
 let displayInformationHeader model =
     let separator: ReactElement = span [] [ str " | " ]
@@ -632,7 +543,7 @@ let displayInformationHeader model =
 
     div
         [ Id "active-player-header"
-          ClassName "text-center col text-truncate h3 d-none d-md-block d-lg-block d-xl-block" ]
+          ClassName "text-center col text-truncate h3 d-none d-lg-block d-xl-block" ]
         (joinHtmlElements separator elements)
 
 let addNoteToActiveCardModal card model dispatch =
@@ -647,19 +558,19 @@ let addNoteToActiveCardModal card model dispatch =
               [ div [ ClassName "modal-content" ]
                     [ div [ ClassName "modal-body" ]
                           [ div [ ClassName "form-group container" ]
-                                [ div [ ClassName "row" ] [
-                                    input
-                                            [ Name "note"
-                                              ClassName "m-1 w-100 col"
-                                              Id "activecardnote"
-                                              Placeholder (unwrapOr card.Note "Enter a note here...")
-                                              InputType "text" ] ] ] ]
+                                [ div [ ClassName "row" ]
+                                      [ input
+                                          [ Name "note"
+                                            ClassName "m-1 w-100 col"
+                                            Id "activecardnote"
+                                            Placeholder(unwrapOr card.Note "Enter a note here...")
+                                            InputType "text" ] ] ] ]
                       div [ ClassName "modal-footer" ]
-                        [ button
-                            [ ClassName "btn btn-primary"
-                              DataDismiss "modal"
-                              OnClick(fun _ -> AddNoteToActiveCard card |> dispatch) ]
-                            [ str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE") ] ] ] ] ]
+                          [ button
+                              [ ClassName "btn btn-primary"
+                                DataDismiss "modal"
+                                OnClick(fun _ -> AddNoteToActiveCard card |> dispatch) ]
+                                [ str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE") ] ] ] ] ]
 
 let displayActiveCard (card, player: Player.Type option) model dispatch =
     div
@@ -673,32 +584,35 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
               [ str
                   ((if player.IsSome then (sprintf "[%s] " player.Value.Name) else "") + card.Text
                    + (if card.Rounds > 0 && card.Uses = 0 then (sprintf " (%d)" card.Rounds) else "")) ]
-          div [ ClassName "card-body text-center mb-2" ] [
-                  (match card.Note with
-                   | Some value -> h6 [ ] [ em [  ] [str value ] ]
-                   | None -> span [] []
-                  )
-                  (if card.Uses > 0 && player.IsSome then
-                      button
-                          [ ClassName "btn btn-primary mb-1 w-100"
-                            OnClick(fun _ -> UseActiveCard(card, player.Value) |> dispatch) ]
-                          [ str (sprintf "%s (%d)" (getKey (model.Settings.Language) "ACTIVE_CARD_USE") card.Uses) ]
-                   else
-                       span [] [])
-                  button
-                      [ ClassName "btn btn-primary mr-1"
-                        Style [ Width "49%" ]
-                        OnClick(fun _ -> RemoveActiveCard card |> dispatch) ]
-                      [ str (getKey (model.Settings.Language) "ACTIVE_CARD_DELETE") ]
-                  button
-                        [ ClassName "btn btn-primary"
-                          Style [ Width "49%" ]
-                          DataToggle "modal"
-                          DataTarget "#activecardnotemodal" ] [ str (getKey (model.Settings.Language) "ACTIVE_CARD_ADD_NOTE") ] ] ]
+          div [ ClassName "card-body text-center mb-2" ]
+              [ (match card.Note with
+                 | Some value -> h6 [] [ em [] [ str value ] ]
+                 | None -> span [] [])
+                (match card.StartingRound with
+                 | Some value -> h6 [ ] [ em [ ] [ str (sprintf "Started in round: %d" value) ] ]
+                 | None -> span [] [])
+                (if card.Uses > 0 && player.IsSome then
+                    button
+                        [ ClassName "btn btn-primary mb-1 w-100"
+                          OnClick(fun _ -> UseActiveCard(card, player.Value) |> dispatch) ]
+                        [ str (sprintf "%s (%d)" (getKey (model.Settings.Language) "ACTIVE_CARD_USE") card.Uses) ]
+                 else
+                     span [] [])
+                button
+                    [ ClassName "btn btn-primary mr-1"
+                      Style [ Width "49%" ]
+                      OnClick(fun _ -> RemoveActiveCard card |> dispatch) ]
+                    [ str (getKey (model.Settings.Language) "ACTIVE_CARD_DELETE") ]
+                button
+                    [ ClassName "btn btn-primary"
+                      Style [ Width "49%" ]
+                      DataToggle "modal"
+                      DataTarget "#activecardnotemodal" ]
+                    [ str (getKey (model.Settings.Language) "ACTIVE_CARD_ADD_NOTE") ] ] ]
 
 let activeCards (model: Model) dispatch =
     div
-        [ ClassName "active-cards row mt-3"
+        [ ClassName "active-cards row mt-3 d-none d-lg-block d-xl-block"
           Style
               [ Height "22%"
                 OverflowY "scroll"
@@ -724,17 +638,35 @@ let view (model: Model) dispatch =
                     [ audio
                         [ Id "nextround-audio"
                           Src "/nextround.mp3" ] [] ]
-                div [ ClassName "col-1" ]
-                    [ button
-                        [ ClassName "btn btn-primary m-1"
-                          DataToggle "modal"
-                          DataTarget "#settings" ] [ str (getKey (model.Settings.Language) "SETTINGS") ]
-                      button
-                          [ ClassName "btn btn-primary ml-1"
-                            OnClick(fun _ -> dispatch Reset) ] [ str (getKey (model.Settings.Language) "RESET") ] ]
+                div [ ClassName "col-sm-8 col-lg-2" ]
+                    [ div [ ClassName "" ]
+                          [ button
+                              [ ClassName "btn btn-primary m-1"
+                                DataToggle "modal"
+                                DataTarget "#settings" ] [ str (getKey (model.Settings.Language) "SETTINGS") ]
+                            button
+                                [ ClassName "btn btn-primary m-1"
+                                  OnClick(fun _ -> dispatch Reset) ]
+                                [ str (getKey (model.Settings.Language) "RESET") ]
+                            (match navigator.userAgent.Contains "Android" with
+                             | true ->
+                                 a
+                                     [ ClassName "d-sm-block d-lg-none m-1"
+                                       Href "https://play.google.com/store/apps/details?id=group.openalcoholics.sam" ]
+                                     [ img
+                                         [ Alt(getKey (model.Settings.Language) "GOOGLE_PLAY_IMG_ALT")
+                                           Src(sprintf "google-play-badge_%s.png" model.Settings.Language)
+                                           Style
+                                               [ Height "40%"
+                                                 Width "40%" ] ] ]
+                             | false -> span [] []) ] ]
                 displayInformationHeader model
-                span [ ClassName "text-secondary d-none d-md-block d-lg-block d-xl-block" ]
-                    [ str (sprintf "%s: saufautomat@carstens.tech" (getKey (model.Settings.Language) "CONTACT")) ] ]
+                span [ ClassName "text-secondary col-2" ]
+                    [ str (sprintf "%s: " (getKey (model.Settings.Language) "CONTACT"))
+                      a [ Id "contactlink"
+                          Href "mailto:saufautomat@carstens.tech"
+                          ClassName "text-secondary" ] [ str "saufautomat@carstens.tech" ]
+                    ] ]
           div
               [ ClassName "row m-2"
                 Style [ Height "65%" ] ]

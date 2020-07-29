@@ -16,7 +16,7 @@ let english =
         Add("ADD_PLAYER", "Add player").
         Add("PLAYER_SUSPEND_ON", "Suspend").
         Add("PLAYER_SUSPEND_OFF", "Unsuspend").
-        Add("PLAYER_DELETE", "DELETE").
+        Add("PLAYER_DELETE", "Delete").
         Add("ACTIVE_CARD_DELETE", "Delete").
         Add("ACTIVE_CARD_USE", "Use").
         Add("RESET", "Reset").
@@ -32,7 +32,8 @@ let english =
         Add("ROUND", "Round").
         Add("PERSONAL_CARD_INDICATOR", "personal").
         Add("ACTIVE_CARD_ADD_NOTE", "Add note").
-        Add("ACTIVE_CARD_SAVE_NOTE", "Save")
+        Add("ACTIVE_CARD_SAVE_NOTE", "Save").
+        Add("GOOGLE_PLAY_IMG_ALT", "Get it on Google Play")
 
 
 let german =
@@ -44,7 +45,7 @@ let german =
         Add("NUMBER_CARDS_PLAYED", "Anzahl bisher gespielter Karten").
         Add("ADD_PLAYER", "Spieler hinzufügen").
         Add("PLAYER_SUSPEND_ON", "Aussetzen").
-        Add("PLAYER_SUSPEND_OFF", "Unsuspend").
+        Add("PLAYER_SUSPEND_OFF", "Fortfahren").
         Add("PLAYER_DELETE", "Löschen").
         Add("ACTIVE_CARD_DELETE", "Löschen").
         Add("ACTIVE_CARD_USE", "Einsetzen").
@@ -61,7 +62,8 @@ let german =
         Add("ROUND", "Runde").
         Add("PERSONAL_CARD_INDICATOR", "persönlich").
         Add("ACTIVE_CARD_ADD_NOTE", "Notiz hinzufügen").
-        Add("ACTIVE_CARD_SAVE_NOTE", "Speichern")
+        Add("ACTIVE_CARD_SAVE_NOTE", "Speichern").
+        Add("GOOGLE_PLAY_IMG_ALT", "Jetzt bei Google Play")
 
 let getKey language key =
     unwrapOr (match language with
