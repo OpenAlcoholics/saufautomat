@@ -1,8 +1,11 @@
 module Player
 
+open System
+
 [<CustomEquality; NoComparison>]
 type Type =
-    { Name: string
+    { GId: string
+      Name: string
       Active: bool
       CardsPlayed: int }
 
@@ -15,7 +18,8 @@ type Type =
     override this.GetHashCode() = hash this.Name
 
 let create name =
-    { Name = name
+    { GId = Guid.NewGuid().ToString()
+      Name = name
       Active = true
       CardsPlayed = 0 }
 
