@@ -335,9 +335,9 @@ let update (msg: Msg) (model: Model) =
         { model with
               Settings = { model.Settings with Language = language }
               ActiveCards = [] }, Cmd.ofSub (fun dispatch -> getCards language dispatch |> Promise.start)
-    | AddNoteToActiveCard card ->
+    | AddNoteToActiveCard (card, player) ->
         let note =
-            match ((Browser.Dom.window.document.getElementById "activecardnote") :?> Browser.Types.HTMLInputElement).value with
+            match ((Browser.Dom.window.document.getElementById (sprintf "activecardnote%d%s" card.Id (unwrapMapOrDefault player (fun p -> p.Name) ""))) :?> Browser.Types.HTMLInputElement).value with
             | "" -> None
             | value -> Some value
         { model with
@@ -546,10 +546,10 @@ let displayInformationHeader model =
           ClassName "text-center col text-truncate h3 d-none d-lg-block d-xl-block" ]
         (joinHtmlElements separator elements)
 
-let addNoteToActiveCardModal card model dispatch =
+let addNoteToActiveCardModal card player model dispatch =
     div
         [ ClassName "modal fade"
-          Id "activecardnotemodal"
+          Id (sprintf "activecardnotemodal%d%s" card.Id (unwrapMapOrDefault player (fun p -> p.Name) ""))
           TabIndex -1
           Role "dialog" ]
         [ div
@@ -562,14 +562,14 @@ let addNoteToActiveCardModal card model dispatch =
                                       [ input
                                           [ Name "note"
                                             ClassName "m-1 w-100 col"
-                                            Id "activecardnote"
+                                            Id (sprintf "activecardnote%d%s" card.Id (unwrapMapOrDefault player (fun p -> p.Name) ""))
                                             Placeholder(unwrapOr card.Note "Enter a note here...")
                                             InputType "text" ] ] ] ]
                       div [ ClassName "modal-footer" ]
                           [ button
                               [ ClassName "btn btn-primary"
                                 DataDismiss "modal"
-                                OnClick(fun _ -> AddNoteToActiveCard card |> dispatch) ]
+                                OnClick(fun _ -> AddNoteToActiveCard (card, player) |> dispatch) ]
                                 [ str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE") ] ] ] ] ]
 
 let displayActiveCard (card, player: Player.Type option) model dispatch =
@@ -579,7 +579,7 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
                                then " border-success"
                                else ""))
           Title card.Text ]
-        [ (addNoteToActiveCardModal card model dispatch)
+        [ (addNoteToActiveCardModal card player model dispatch)
           h5 [ ClassName "card-title h-50" ]
               [ str
                   ((if player.IsSome then (sprintf "[%s] " player.Value.Name) else "") + card.Text
@@ -607,7 +607,7 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
                     [ ClassName "btn btn-primary"
                       Style [ Width "49%" ]
                       DataToggle "modal"
-                      DataTarget "#activecardnotemodal" ]
+                      DataTarget (sprintf "#activecardnotemodal%d%s" card.Id (unwrapMapOrDefault player (fun p -> p.Name) "")) ]
                     [ str (getKey (model.Settings.Language) "ACTIVE_CARD_ADD_NOTE") ] ] ]
 
 let activeCards (model: Model) dispatch =

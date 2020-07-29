@@ -49,4 +49,4 @@ type Msg =
     | PlayAudio
     | RemoveActiveCard of Card.Type
     | RemoveCardFromSession of Card.Type
-    | AddNoteToActiveCard of Card.Type
+    | AddNoteToActiveCard of Card.Type * Player.Type option
