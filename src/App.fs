@@ -77,15 +77,13 @@ let filterCardsForTurn cards model =
     let cards =
         List.filter (fun card ->
             card.Count > 0 && ((model.Settings.Remote && card.Remote) || (not model.Settings.Remote))
-            && if model.Players.Length = 0 then
-                (not card.Personal) && card.Rounds = 0
-               else
-                   true) cards
+            && if model.Players.Length = 0 then (not card.Personal) && card.Rounds = 0 else true) cards
 
-    let cards = List.filter (fun card ->
-        if card.Unique && not card.Personal
-        then (List.filter (fun (activeCard, _) -> card.Unique && (activeCard = card)) model.ActiveCards).Length = 0
-        else true) cards
+    let cards =
+        List.filter (fun card ->
+            if card.Unique && not card.Personal
+            then (List.filter (fun (activeCard, _) -> card.Unique && (activeCard = card)) model.ActiveCards).Length = 0
+            else true) cards
 
     List.filter (fun card ->
         if distinctCount > 1
@@ -129,6 +127,10 @@ let getPlayerByIndex index (players: Player.Type list): Player.Type option =
 
 let allowedLanguages = [ "de"; "en" ]
 
+let generateActiveCardId card player isModal isId =
+    sprintf "%sactivecardnote%s%d%s" (if isId then "#" else "") (if isModal then "modal" else "") card.Id
+        (unwrapMapOrDefault player (fun p -> p.GId) "")
+
 let update (msg: Msg) (model: Model) =
     match msg with
     | InitialLoad ->
@@ -142,8 +144,9 @@ let update (msg: Msg) (model: Model) =
                dispatch ChangeActivePlayer
                dispatch ChangeActiveCard
                dispatch DecrementPlayerRoundCards
-               if roundHasEnded model then dispatch AdvanceRound
-                                           dispatch DecrementActiveRoundCards)
+               if roundHasEnded model then
+                   dispatch AdvanceRound
+                   dispatch DecrementActiveRoundCards)
     | PlayAudio ->
         if model.Settings.Audio then
             let audioId =
@@ -216,15 +219,19 @@ let update (msg: Msg) (model: Model) =
 
         let playerIndex = unwrapOr (Player.getIndex (Some player) model.Players) 0
         let currentPlayerIndex = unwrapOr (Player.getIndex model.CurrentPlayer model.Players) 0
-        let cardsToPlayModifier = match (playerIndex > model.RoundInformation.InitialPlayerIndex && playerIndex < model.Players.Length && playerIndex < currentPlayerIndex)
-                                        || (playerIndex < model.RoundInformation.InitialPlayerIndex && playerIndex < currentPlayerIndex) with
-                                  | true -> 0
-                                  | false -> -1
+
+        let cardsToPlayModifier =
+            match (playerIndex > model.RoundInformation.InitialPlayerIndex && playerIndex < model.Players.Length
+                   && playerIndex < currentPlayerIndex)
+                  || (playerIndex < model.RoundInformation.InitialPlayerIndex && playerIndex < currentPlayerIndex) with
+            | true -> 0
+            | false -> -1
 
         { model with
               Players = players
               ActiveCards = activeCards
-              RoundInformation = { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay + cardsToPlayModifier } },
+              RoundInformation =
+                  { model.RoundInformation with CardsToPlay = model.RoundInformation.CardsToPlay + cardsToPlayModifier } },
         (if isCurrentPlayer
          then Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
          else Cmd.Empty)
@@ -239,8 +246,14 @@ let update (msg: Msg) (model: Model) =
     | DisplayPlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = true }, Cmd.Empty
     | HidePlayerNameDuplicate -> { model with DisplayPlayerNameDuplicateError = false }, Cmd.Empty
     | AddActiveCard (card, player) ->
-        let player = if card.Personal then player else None
-        { model with ActiveCards = ({ card with StartingRound = if card.Rounds > 0 then Some model.Round else None }, player) :: model.ActiveCards }, Cmd.Empty
+        let player =
+            if card.Personal then player else None
+        { model with
+              ActiveCards =
+                  ({ card with
+                         StartingRound =
+                             if card.Rounds > 0 then Some model.Round else None }, player)
+                  :: model.ActiveCards }, Cmd.Empty
     | DecrementActiveRoundCards ->
         { model with
               ActiveCards =
@@ -271,10 +284,12 @@ let update (msg: Msg) (model: Model) =
                       (c.Rounds <> 0 || c.Uses > 0)
                       && not (card.Uses = 1 && card = c && (Player.compareOption (Some player) p)))
                       (List.map (fun (c, p) ->
-                          (if card = c && (Player.compareOption (Some player) p)
-                           then { c with Uses = c.Uses - 1
-                                         StartingRound = Some model.Round }
-                           else c), p) model.ActiveCards) },
+                          (if card = c && (Player.compareOption (Some player) p) then
+                              { c with
+                                    Uses = c.Uses - 1
+                                    StartingRound = Some model.Round }
+                           else
+                               c), p) model.ActiveCards) },
         Cmd.ofSub (fun dispatch -> AddActiveCard({ card with Uses = 0 }, (Some player)) |> dispatch)
     | ChangeRemoteSetting ->
         let remote =
@@ -337,7 +352,7 @@ let update (msg: Msg) (model: Model) =
               ActiveCards = [] }, Cmd.ofSub (fun dispatch -> getCards language dispatch |> Promise.start)
     | AddNoteToActiveCard (card, player) ->
         let note =
-            match ((Browser.Dom.window.document.getElementById (sprintf "activecardnote%d%s" card.Id (unwrapMapOrDefault player (fun p -> p.Name) ""))) :?> Browser.Types.HTMLInputElement).value with
+            match ((Browser.Dom.window.document.getElementById (generateActiveCardId card player false false)) :?> Browser.Types.HTMLInputElement).value with
             | "" -> None
             | value -> Some value
         { model with
@@ -419,10 +434,7 @@ let settings model dispatch =
                                               ClassName "m-1 w-100 col"
                                               Id "language"
                                               DefaultValue model.Settings.Language ]
-                                            (List.map
-                                                (fun language ->
-                                                    option [  ]
-                                                        [ str language ]) allowedLanguages) ] ] ]
+                                            (List.map (fun language -> option [] [ str language ]) allowedLanguages) ] ] ]
                       div [ ClassName "modal-footer" ]
                           [ span [ ClassName "text-secondary" ] [ str "{{TAG}}" ]
                             button
@@ -549,7 +561,7 @@ let displayInformationHeader model =
 let addNoteToActiveCardModal card player model dispatch =
     div
         [ ClassName "modal fade"
-          Id (sprintf "activecardnotemodal%d%s" card.Id (unwrapMapOrDefault player (fun p -> p.Name) ""))
+          Id(generateActiveCardId card player true false)
           TabIndex -1
           Role "dialog" ]
         [ div
@@ -562,14 +574,14 @@ let addNoteToActiveCardModal card player model dispatch =
                                       [ input
                                           [ Name "note"
                                             ClassName "m-1 w-100 col"
-                                            Id (sprintf "activecardnote%d%s" card.Id (unwrapMapOrDefault player (fun p -> p.Name) ""))
+                                            Id(generateActiveCardId card player false false)
                                             Placeholder(unwrapOr card.Note "Enter a note here...")
                                             InputType "text" ] ] ] ]
                       div [ ClassName "modal-footer" ]
                           [ button
                               [ ClassName "btn btn-primary"
                                 DataDismiss "modal"
-                                OnClick(fun _ -> AddNoteToActiveCard (card, player) |> dispatch) ]
+                                OnClick(fun _ -> AddNoteToActiveCard(card, player) |> dispatch) ]
                                 [ str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE") ] ] ] ] ]
 
 let displayActiveCard (card, player: Player.Type option) model dispatch =
@@ -589,7 +601,7 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
                  | Some value -> h6 [] [ em [] [ str value ] ]
                  | None -> span [] [])
                 (match card.StartingRound with
-                 | Some value -> h6 [ ] [ em [ ] [ str (sprintf "Started in round: %d" value) ] ]
+                 | Some value -> h6 [] [ em [] [ str (sprintf "Started in round: %d" value) ] ]
                  | None -> span [] [])
                 (if card.Uses > 0 && player.IsSome then
                     button
@@ -607,7 +619,7 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
                     [ ClassName "btn btn-primary"
                       Style [ Width "49%" ]
                       DataToggle "modal"
-                      DataTarget (sprintf "#activecardnotemodal%d%s" card.Id (unwrapMapOrDefault player (fun p -> p.Name) "")) ]
+                      DataTarget(generateActiveCardId card player true true) ]
                     [ str (getKey (model.Settings.Language) "ACTIVE_CARD_ADD_NOTE") ] ] ]
 
 let activeCards (model: Model) dispatch =
@@ -663,10 +675,10 @@ let view (model: Model) dispatch =
                 displayInformationHeader model
                 span [ ClassName "text-secondary col-2" ]
                     [ str (sprintf "%s: " (getKey (model.Settings.Language) "CONTACT"))
-                      a [ Id "contactlink"
-                          Href "mailto:saufautomat@carstens.tech"
-                          ClassName "text-secondary" ] [ str "saufautomat@carstens.tech" ]
-                    ] ]
+                      a
+                          [ Id "contactlink"
+                            Href "mailto:saufautomat@carstens.tech"
+                            ClassName "text-secondary" ] [ str "saufautomat@carstens.tech" ] ] ]
           div
               [ ClassName "row m-2"
                 Style [ Height "65%" ] ]
