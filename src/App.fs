@@ -5,11 +5,12 @@ module App
  You can find more info about Elmish architecture and samples at https://elmish.github.io/
 *)
 
+open System
 open Card
 open Browser
 open Elmish
 open Elmish.React
-open Fable.Core
+open Fable.Import
 open Fable.React
 open Fable.React.Props
 open Helper
@@ -295,10 +296,14 @@ let update (msg: Msg) (model: Model) =
         let remote =
             ((Browser.Dom.window.document.getElementById "remote") :?> Browser.Types.HTMLInputElement).``checked``
 
+        JsCookie.set "remote" (sprintf "%b" remote) |> ignore
+
         { model with Settings = { model.Settings with Remote = remote } }, Cmd.Empty
     | ChangeAudioSetting ->
         let audio =
             ((Browser.Dom.window.document.getElementById "audio") :?> Browser.Types.HTMLInputElement).``checked``
+
+        JsCookie.set "audio" (sprintf "%b" audio) |> ignore
 
         { model with Settings = { model.Settings with Audio = audio } }, Cmd.Empty
     | SaveSettings ->
@@ -306,11 +311,13 @@ let update (msg: Msg) (model: Model) =
             (match ((Browser.Dom.window.document.getElementById "minimum-sips") :?> Browser.Types.HTMLInputElement).value with
              | "" -> model.Settings.MinimumSips
              | value -> value |> int)
+        JsCookie.set "minimum-sips" (sprintf "%d" min) |> ignore
 
         let max =
             (match ((Browser.Dom.window.document.getElementById "maximum-sips") :?> Browser.Types.HTMLInputElement).value with
              | "" -> model.Settings.MaximumSips
              | value -> value |> int)
+        JsCookie.set "maximum-sips" (sprintf "%d" max) |> ignore
 
         let language =
             (match ((Browser.Dom.window.document.getElementById "language") :?> Browser.Types.HTMLInputElement).value with
@@ -321,6 +328,7 @@ let update (msg: Msg) (model: Model) =
             if not (List.exists ((=) language) allowedLanguages)
             then model.Settings.Language
             else language
+        JsCookie.set "language" language |> ignore
 
         { model with
               Settings =
