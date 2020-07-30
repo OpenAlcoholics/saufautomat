@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
     name: "Build bundle.js"
     runs-on: ubuntu-latest
     steps:
@@ -23,6 +24,7 @@ jobs:
           name: public
           path: public/
   build_push_docker:
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -40,6 +42,7 @@ jobs:
       - name: Push the tagged Docker image
         run: docker push openalcoholics/saufautomat:${{steps.vars.outputs.tag}}
   deploy:
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
     name: "Publish to k8s"
     runs-on: ubuntu-latest
     needs: build_push_docker
