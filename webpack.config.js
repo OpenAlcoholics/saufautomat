@@ -7,6 +7,7 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const FixStyleOnlyEntriesPlugin = require("webpack-fix-style-only-entries");
 const OptimizeCSSAssetsPlugin = require("optimize-css-assets-webpack-plugin");
+const HTMLInlineCSSWebpackPlugin = require("html-inline-css-webpack-plugin").default;
 
 module.exports = {
     mode: "development",
@@ -37,6 +38,7 @@ module.exports = {
         new HtmlWebpackPlugin({template: "public/index.html"}),
         new MiniCssExtractPlugin({filename: "bootstrap.css"}),
         new FixStyleOnlyEntriesPlugin(),
-        new OptimizeCSSAssetsPlugin({})
+        new OptimizeCSSAssetsPlugin({}),
+        new HTMLInlineCSSWebpackPlugin()
     ]
 }

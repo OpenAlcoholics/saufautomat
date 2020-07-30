@@ -17,6 +17,8 @@ jobs:
           dotnet-version: "3.1.x"
       - run: sed -i -e "s#{{TAG}}#$(echo ${GITHUB_SHA})#g" src/App.fs
       - run: sed -i -e "s/|> Program.withConsoleTrace//g" src/App.fs
+      - run: sed -i -e 's#\s*<link rel="stylesheet" href="bootstrap.css" />##g' public/index.html
+      - run: sed -i -e 's#\s*<link rel="stylesheet" href="main.css" />##g' public/index.html
       - run: npm install
       - run: npm run prod
       - uses: actions/upload-artifact@v1
