@@ -521,7 +521,7 @@ let displayCurrentCard model dispatch =
               [ button
                   [ OnClick(fun _ -> dispatch AdvanceTurn)
                     ClassName "card-body card-title btn btn-dark w-100"
-                    Style [ Height "95%" ]
+                    Style [ Height "93%" ]
                     Id "current-card-body"
                     Disabled(model.CurrentCard.IsNone && model.Counter > 0) ]
                     [ span [ ClassName "h3" ]
