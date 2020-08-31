@@ -33,7 +33,8 @@ let english =
         Add("PERSONAL_CARD_INDICATOR", "personal").
         Add("ACTIVE_CARD_ADD_NOTE", "Add note").
         Add("ACTIVE_CARD_SAVE_NOTE", "Save").
-        Add("GOOGLE_PLAY_IMG_ALT", "Get it on Google Play")
+        Add("GOOGLE_PLAY_IMG_ALT", "Get it on Google Play").
+        Add("ACTIVE_CARD_REASSIGN", "Reassign")
 
 
 let german =
@@ -63,7 +64,8 @@ let german =
         Add("PERSONAL_CARD_INDICATOR", "persönlich").
         Add("ACTIVE_CARD_ADD_NOTE", "Notiz hinzufügen").
         Add("ACTIVE_CARD_SAVE_NOTE", "Speichern").
-        Add("GOOGLE_PLAY_IMG_ALT", "Jetzt bei Google Play")
+        Add("GOOGLE_PLAY_IMG_ALT", "Jetzt bei Google Play").
+        Add("ACTIVE_CARD_REASSIGN", "Zuweisen")
 
 let getKey language key =
     unwrapOr (match language with

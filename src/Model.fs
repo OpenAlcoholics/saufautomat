@@ -50,3 +50,4 @@ type Msg =
     | RemoveActiveCard of Card.Type
     | RemoveCardFromSession of Card.Type
     | AddNoteToActiveCard of Card.Type * Player.Type option
+    | ReassignCard of Card.Type

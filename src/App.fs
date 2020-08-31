@@ -360,13 +360,25 @@ let update (msg: Msg) (model: Model) =
               ActiveCards = [] }, Cmd.ofSub (fun dispatch -> getCards language dispatch |> Promise.start)
     | AddNoteToActiveCard (card, player) ->
         let note =
-            match ((Browser.Dom.window.document.getElementById (generateActiveCardId card player false false)) :?> Browser.Types.HTMLInputElement).value with
+            match ((document.getElementById (generateActiveCardId card player false false)) :?> Browser.Types.HTMLInputElement).value with
             | "" -> None
             | value -> Some value
         { model with
               ActiveCards =
                   List.map (fun (c, player) ->
                       (if card = c then { card with Note = note } else c), player) model.ActiveCards }, Cmd.Empty
+    | ReassignCard card ->
+        match ((document.getElementById "reassignplayeroption") :?> Browser.Types.HTMLInputElement).value with
+        | "" -> model, Cmd.Empty
+        | name ->
+            match List.tryFind (fun p -> p.Name = name) model.Players with
+                            | Some newPlayer ->
+                                let activeCards = List.map (fun (c, player) -> c, (if card = c then Some newPlayer else player)) model.ActiveCards
+
+                                { model with
+                                      ActiveCards = activeCards }, Cmd.Empty
+                            | None -> model, Cmd.Empty
+
 
 // VIEW (rendered with React)
 
@@ -592,12 +604,40 @@ let addNoteToActiveCardModal card player model dispatch =
                                 OnClick(fun _ -> AddNoteToActiveCard(card, player) |> dispatch) ]
                                 [ str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE") ] ] ] ] ]
 
+let playerListModal model dispatch card (player: Player.Type option) =
+    let players = List.filter ((<>) player.Value) model.Players
+
+    div
+        [ ClassName "modal fade"
+          Id "playerlistmodal"
+          TabIndex -1
+          Role "dialog" ]
+        [ div
+            [ ClassName "modal-dialog"
+              Role "document" ]
+              [ div [ ClassName "modal-content" ]
+                    [ div [ ClassName "modal-body" ]
+                          [ div [ ClassName "form-group container" ]
+                                [ div [ ClassName "row" ] [
+                                      select [ Name "player"
+                                               ClassName "m-1 w-100 col"
+                                               Id "reassignplayeroption" ] (List.map (fun player -> option [] [ str player.Name ]) players) ] ] ]
+
+                      div [ ClassName "modal-footer" ]
+                          [ button
+                              [ ClassName "btn btn-primary"
+                                DataDismiss "modal"
+                                OnClick(fun _ -> ReassignCard card |> dispatch) ]
+                                [ str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE") ] ]
+                ] ] ]
+
 let displayActiveCard (card, player: Player.Type option) model dispatch =
     div
         [ ClassName
             ("card p-2 m-1" + (if Player.compareOption player model.CurrentPlayer
                                then " border-success"
                                else ""))
+          Style [ Height "1%" ]
           Title card.Text ]
         [ (addNoteToActiveCardModal card player model dispatch)
           h5 [ ClassName "card-title h-50" ]
@@ -628,7 +668,16 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
                       Style [ Width "49%" ]
                       DataToggle "modal"
                       DataTarget(generateActiveCardId card player true true) ]
-                    [ str (getKey (model.Settings.Language) "ACTIVE_CARD_ADD_NOTE") ] ] ]
+                    [ str (getKey (model.Settings.Language) "ACTIVE_CARD_ADD_NOTE") ]
+                if player.IsSome && model.Players.Length > 1 then
+                    playerListModal model dispatch card player
+                    button
+                        [ ClassName "btn btn-primary"
+                          Style [ Width "49%"
+                                  MarginTop "1%" ]
+                          DataToggle "modal"
+                          DataTarget "#playerlistmodal" ]
+                        [ str (getKey (model.Settings.Language) "ACTIVE_CARD_REASSIGN") ] ] ]
 
 let activeCards (model: Model) dispatch =
     div
@@ -658,6 +707,7 @@ let view (model: Model) dispatch =
                     [ audio
                         [ Id "nextround-audio"
                           Src "/nextround.mp3" ] [] ]
+                span [ Id "cardToReassign" ] [  ]
                 div [ ClassName "col-sm-8 col-lg-2" ]
                     [ div [ ClassName "" ]
                           [ button
