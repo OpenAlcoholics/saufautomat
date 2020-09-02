@@ -178,7 +178,7 @@ let update (msg: Msg) (model: Model) =
         model,
         (if card.IsSome then
             Cmd.ofSub (fun dispatch ->
-                (if (card.IsSome && card.Value.Rounds <> 0) then
+                (if (isActiveCard card) then
                     AddActiveCard
                         (card.Value,
                          (if card.Value.Personal then model.CurrentPlayer else None))
@@ -258,7 +258,7 @@ let update (msg: Msg) (model: Model) =
     | DecrementActiveRoundCards ->
         { model with
               ActiveCards =
-                  (List.filter (fun (card, _) -> card.Rounds <> 0)
+                  (List.filter (fun (card, _) -> (card.Rounds <> 0 && card.Uses = 0) || card.Uses <> 0)
                        (List.map (fun (card, player: Player.Type option) ->
                            { card with
                                  Rounds =
