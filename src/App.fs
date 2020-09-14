@@ -542,7 +542,10 @@ let settings model dispatch =
                     ]
                 ]
                 div [ ClassName "modal-footer" ] [
-                    span [ ClassName "text-secondary" ] [
+                    span [
+                        Id "git-tag"
+                        ClassName "text-secondary {{TAG-CLASS}}"
+                    ] [
                         str "{{TAG}}"
                     ]
                     button [ ClassName "btn btn-primary"
