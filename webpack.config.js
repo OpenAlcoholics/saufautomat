@@ -12,7 +12,7 @@ const HTMLInlineCSSWebpackPlugin = require("html-inline-css-webpack-plugin").def
 module.exports = {
     mode: "development",
     entry: {
-        bundle: "./src/App.fsproj",
+        bundle: "./src/App.fs.js",
         styles: ["./public/main.css", "./public/bootstrap.css"],
     },
     output: {
@@ -27,9 +27,6 @@ module.exports = {
     },
     module: {
         rules: [{
-            test: /\.fs(x|proj)?$/,
-            use: "fable-loader"
-        }, {
             test: /\.css$/,
             use: [MiniCssExtractPlugin.loader, "css-loader"]
         }]

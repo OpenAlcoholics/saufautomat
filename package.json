@@ -6,7 +6,6 @@
     "prod": "npx webpack --mode production"
   },
   "dependencies": {
-    "fable-loader": "^2.1.8",
     "js-cookie": "^2.2.1",
     "react": "^16.13.0",
     "react-dom": "^16.13.0"
@@ -14,7 +13,6 @@
   "devDependencies": {
     "@babel/core": "^7.8.7",
     "css-loader": "^3.5.3",
-    "fable-compiler": "^2.4.18",
     "html-inline-css-webpack-plugin": "^1.8.1",
     "html-webpack-plugin": "^4.3.0",
     "mini-css-extract-plugin": "^0.9.0",
