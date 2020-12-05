@@ -46,8 +46,10 @@ let joinHtmlElements (sep: ReactElement) (l: ReactElement list) =
 let play id =
     ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).play()
 
-[<Emit("$0.currentTime = $1")>]
-let assignCurrentTime element value = jsNative
+[<Emit("$0[$1] = $2")>]
+let assignElement element key value = jsNative
+
+let assignCurrentTime element value = assignElement element "currentTime" value
 
 let stop id =
     ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).pause()
