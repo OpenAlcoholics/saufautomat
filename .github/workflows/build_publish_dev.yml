@@ -23,7 +23,7 @@ jobs:
       - run: sed -i -e 's#\s*<link rel="stylesheet" href="bootstrap.css" />##g' public/index.html
       - run: sed -i -e 's#\s*<link rel="stylesheet" href="main.css" />##g' public/index.html
       - run: npm install
-      - run: dotnet tool install fable
+      - run: dotnet tool restore
       - run: dotnet fable src --run webpack
       - uses: actions/upload-artifact@v1
         with:
