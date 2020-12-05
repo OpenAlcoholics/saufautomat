@@ -79,7 +79,7 @@ let rec findNextActivePlayer (playerList: Player.Type list) model =
 let int_replacement_regex = Regex("{int(:\s*[a-z]+.*?)?}")
 
 let filterCardsForTurn cards model =
-    let distinctCount = (Card.getDistinctCount cards)
+    let distinctCount = (getDistinctCount cards)
 
     let cards =
         List.filter (fun card ->
@@ -107,7 +107,7 @@ let getNextCard cards model =
         None
     else
         let card =
-            cards.Item(System.Random().Next() % cards.Length)
+            cards.Item(Random().Next() % cards.Length)
 
         let min = model.Settings.MinimumSips
         let max = model.Settings.MaximumSips
@@ -120,7 +120,7 @@ let getNextCard cards model =
                 // This is temporary until the parser and variable replacement is implemented
                 let m = int_replacement_regex.Match w
                 match m.Success with
-                | true -> (sprintf "%d" ((System.Random().Next()) % (max - min + 1) + min))
+                | true -> (sprintf "%d" ((Random().Next()) % (max - min + 1) + min))
                 | false -> w) (text.Split ' '))
             |> String.concat " "
 
@@ -183,7 +183,7 @@ let update (msg: Msg) (model: Model) =
         model, Cmd.Empty
     | ChangeActiveCard ->
         let playerCards =
-            Player.filterActiveCards (model.CurrentPlayer.Value) (model.ActiveCards)
+            filterActiveCards (model.CurrentPlayer.Value) (model.ActiveCards)
 
         let cards =
             if model.CurrentPlayer.IsSome
@@ -195,7 +195,7 @@ let update (msg: Msg) (model: Model) =
         let model =
             { model with
                   CurrentCard = card
-                  Cards = Card.decreaseCount card model.Cards
+                  Cards = decreaseCount card model.Cards
                   RoundInformation =
                       { model.RoundInformation with
                             CardsToPlay = max (model.RoundInformation.CardsToPlay - 1) 0 } }
@@ -213,7 +213,7 @@ let update (msg: Msg) (model: Model) =
             findNextActivePlayer
                 ((List.filter (fun p ->
                     p.Active
-                    || (Player.compareOption (model.CurrentPlayer) (Some p))) model.Players))
+                    || (compareOption (model.CurrentPlayer) (Some p))) model.Players))
                 model
 
         (if model.Counter <> 0 then
@@ -221,7 +221,7 @@ let update (msg: Msg) (model: Model) =
                   CurrentPlayer = nextPlayer
                   Players =
                       List.map (fun player ->
-                          if (Player.compareOption (Some player) nextPlayer) then
+                          if (compareOption (Some player) nextPlayer) then
                               { player with
                                     CardsPlayed = player.CardsPlayed + 1 }
                           else
@@ -235,7 +235,7 @@ let update (msg: Msg) (model: Model) =
         Cmd.Empty
     | AddCards cards ->
         { model with
-              Cards = explodeCards (List.map Card.Into cards) },
+              Cards = explodeCards (List.map Into cards) },
         Cmd.Empty
     | AddPlayer player ->
         { model with
@@ -248,19 +248,19 @@ let update (msg: Msg) (model: Model) =
         | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
     | RemovePlayer player ->
         let isCurrentPlayer =
-            Player.isCurrent player model.CurrentPlayer
+            isCurrent player model.CurrentPlayer
 
         let players =
             (List.filter (fun p -> p <> player) model.Players)
 
         let activeCards =
-            List.filter (fun (_, p) -> not (Player.compareOption p (Some player))) model.ActiveCards
+            List.filter (fun (_, p) -> not (compareOption p (Some player))) model.ActiveCards
 
         let playerIndex =
-            unwrapOr (Player.getIndex (Some player) model.Players) 0
+            unwrapOr (getIndex (Some player) model.Players) 0
 
         let currentPlayerIndex =
-            unwrapOr (Player.getIndex model.CurrentPlayer model.Players) 0
+            unwrapOr (getIndex model.CurrentPlayer model.Players) 0
 
         let cardsToPlayModifier =
             match (playerIndex > model.RoundInformation.InitialPlayerIndex
@@ -285,7 +285,7 @@ let update (msg: Msg) (model: Model) =
     | TogglePlayerActivity player ->
         { model with
               Players = (List.map (fun p -> if p = player then { p with Active = not p.Active } else p) model.Players) },
-        (if (Player.isCurrent player model.CurrentPlayer)
+        (if (isCurrent player model.CurrentPlayer)
          then Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
          else Cmd.Empty)
     | DisplayPlayerNameDuplicate ->
@@ -325,7 +325,7 @@ let update (msg: Msg) (model: Model) =
               ActiveCards =
                   List.filter (fun (c, _) -> (c.Rounds <> 0 || c.Uses > 0))
                       (List.map (fun (card, player) ->
-                          (if Player.compareOption model.CurrentPlayer player then
+                          (if compareOption model.CurrentPlayer player then
                               { card with
                                     Rounds =
                                         if card.Rounds > 0 && card.Uses = 0 && player.IsSome
@@ -343,9 +343,9 @@ let update (msg: Msg) (model: Model) =
                       && not
                           (card.Uses = 1
                            && card = c
-                           && (Player.compareOption (Some player) p)))
+                           && (compareOption (Some player) p)))
                       (List.map (fun (c, p) ->
-                          (if card = c && (Player.compareOption (Some player) p) then
+                          (if card = c && (compareOption (Some player) p) then
                               { c with
                                     Uses = c.Uses - 1
                                     StartingRound = Some model.Round }
@@ -357,7 +357,7 @@ let update (msg: Msg) (model: Model) =
             |> dispatch)
     | ChangeRemoteSetting ->
         let remote =
-            ((Browser.Dom.window.document.getElementById "remote") :?> Browser.Types.HTMLInputElement).``checked``
+            ((Dom.window.document.getElementById "remote") :?> Browser.Types.HTMLInputElement).``checked``
 
         JsCookie.set "remote" (sprintf "%b" remote)
         |> ignore
@@ -367,7 +367,7 @@ let update (msg: Msg) (model: Model) =
         Cmd.Empty
     | ChangeAudioSetting ->
         let audio =
-            ((Browser.Dom.window.document.getElementById "audio") :?> Browser.Types.HTMLInputElement).``checked``
+            ((Dom.window.document.getElementById "audio") :?> Browser.Types.HTMLInputElement).``checked``
 
         JsCookie.set "audio" (sprintf "%b" audio)
         |> ignore
@@ -377,7 +377,7 @@ let update (msg: Msg) (model: Model) =
         Cmd.Empty
     | SaveSettings ->
         let min =
-            (match ((Browser.Dom.window.document.getElementById "minimum-sips") :?> Browser.Types.HTMLInputElement).value with
+            (match ((Dom.window.document.getElementById "minimum-sips") :?> Browser.Types.HTMLInputElement).value with
              | "" -> model.Settings.MinimumSips
              | value -> value |> int)
 
@@ -385,7 +385,7 @@ let update (msg: Msg) (model: Model) =
         |> ignore
 
         let max =
-            (match ((Browser.Dom.window.document.getElementById "maximum-sips") :?> Browser.Types.HTMLInputElement).value with
+            (match ((Dom.window.document.getElementById "maximum-sips") :?> Browser.Types.HTMLInputElement).value with
              | "" -> model.Settings.MaximumSips
              | value -> value |> int)
 
@@ -393,7 +393,7 @@ let update (msg: Msg) (model: Model) =
         |> ignore
 
         let language =
-            (match ((Browser.Dom.window.document.getElementById "language") :?> Browser.Types.HTMLInputElement).value with
+            (match ((Dom.window.document.getElementById "language") :?> Browser.Types.HTMLInputElement).value with
              | "" -> model.Settings.Language
              | value -> value)
 
@@ -418,9 +418,9 @@ let update (msg: Msg) (model: Model) =
             { model with
                   Round = model.Round + 1
                   RoundInformation =
-                      { CardsToPlay = (Player.getActive model.Players).Length - 1
+                      { CardsToPlay = (getActive model.Players).Length - 1
                         InitialPlayerIndex =
-                            (unwrapOr (Player.getIndex model.CurrentPlayer model.Players) 1)
+                            (unwrapOr (getIndex model.CurrentPlayer model.Players) 1)
                             - 1 } }
          else
              model),
@@ -434,7 +434,7 @@ let update (msg: Msg) (model: Model) =
               Cards = List.filter (fun c -> card <> c) model.Cards },
         Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
     | ChangeLanguage language ->
-        ((Browser.Dom.window.document.getElementsByTagName "html").Item 0).setAttribute("lang", language)
+        ((Dom.window.document.getElementsByTagName "html").Item 0).setAttribute("lang", language)
         { model with
               Settings =
                   { model.Settings with
@@ -559,20 +559,20 @@ let settings model dispatch =
     ]
 
 let addPlayer name model dispatch =
-    match List.tryFind ((=) (Player.create name)) model.Players with
+    match List.tryFind ((=) (create name)) model.Players with
     | Some _ -> false
     | None ->
-        dispatch (AddPlayer(Player.create name))
+        dispatch (AddPlayer(create name))
         HidePlayerNameDuplicate |> ignore
         true
 
 let addPlayerFunction model dispatch =
-    match ((Browser.Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value with
+    match ((Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value with
     | "" -> ()
     | value ->
         (match (addPlayer value model dispatch) with
          | true ->
-             ((Browser.Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value <- ""
+             ((Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value <- ""
          | false -> DisplayPlayerNameDuplicate |> dispatch)
 
 let displayPlayer player model dispatch =
@@ -755,7 +755,7 @@ let playerListModal model dispatch card (player: Player.Type option) =
 let displayActiveCard (card, player: Player.Type option) model dispatch =
     div [ ClassName
               ("card p-2 m-1"
-               + (if Player.compareOption player model.CurrentPlayer
+               + (if compareOption player model.CurrentPlayer
                   then " border-success"
                   else if player.IsNone
                   then " border-warning"
@@ -819,7 +819,7 @@ let activeCards (model: Model) dispatch =
             [ ClassName "col d-flex flex-wrap" ]
             (List.map (fun card -> displayActiveCard card model dispatch)
                  (List.rev
-                     (List.sortBy (fun (_, player) -> Player.compareOption model.CurrentPlayer player) model.ActiveCards)))
+                     (List.sortBy (fun (_, player) -> compareOption model.CurrentPlayer player) model.ActiveCards)))
     ]
 
 let view (model: Model) dispatch =
