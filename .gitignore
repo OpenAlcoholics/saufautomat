@@ -2,6 +2,8 @@
 
 public/bundle.js*
 
+src/*.fs.js
+
 # Node
 node_modules/
 
