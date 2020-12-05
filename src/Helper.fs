@@ -46,12 +46,12 @@ let joinHtmlElements (sep: ReactElement) (l: ReactElement list) =
 let play id =
     ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).play()
 
-[<Emit("$0.currentTime = $2")>]
+[<Emit("$0.currentTime = $1")>]
 let assignCurrentTime element value = jsNative
 
 let stop id =
     ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).pause()
-    assignCurrentTime ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement) "0.0"
+    assignCurrentTime ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement) 0.0
 
 let isActiveCard (card: Card.Type option) =
     card.IsSome && (card.Value.Rounds <> 0 || card.Value.Uses <> 0)
