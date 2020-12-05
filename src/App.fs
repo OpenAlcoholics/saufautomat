@@ -623,7 +623,7 @@ let sidebar (model: Model) dispatch =
             [ ClassName "flex-row mb-4"
               Style [ OverflowY "scroll"
                       Height "85%" ] ]
-            (List.map (fun p -> displayPlayer p model dispatch) model.Players)
+            (List.map (fun p -> displayPlayer p model dispatch) (model.Players |> Seq.sortBy (fun p -> not p.Active) |> List.ofSeq))
     ]
 
 let displayCurrentCard model dispatch =
