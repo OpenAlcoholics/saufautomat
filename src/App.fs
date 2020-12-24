@@ -94,6 +94,15 @@ let filterCardsForTurn cards model =
         else
             true) cards
 
+let rec randomExclusive min max (unusable: int list) =
+    let r = (Random().Next()) % (max - min + 1) + min
+    let forceReturn = (max - min + 1) <= (List.length unusable)
+
+    if List.exists ((=) r) unusable && not forceReturn then
+        randomExclusive min max unusable
+    else
+        r
+
 let getNextCard cards model =
     let cards = filterCardsForTurn cards model
     if cards.Length = 0 then
@@ -108,12 +117,16 @@ let getNextCard cards model =
         let text =
             card.Text.Replace("{int: i}", "{int}").Replace("{int: j}", "{int}").Replace("{int: k}", "{int}")
 
+        let mutable unusable = List.Empty
         let replacement_text =
             (Seq.map (fun (w: string) ->
                 // This is temporary until the parser and variable replacement is implemented
                 let m = int_replacement_regex.Match w
                 match m.Success with
-                | true -> (sprintf "%d" ((Random().Next()) % (max - min + 1) + min))
+                | true ->
+                    let r = randomExclusive min max unusable
+                    unusable <- r :: unusable
+                    (sprintf "%d" r)
                 | false -> w) (text.Split ' '))
             |> String.concat " "
 
