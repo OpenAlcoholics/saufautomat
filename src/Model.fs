@@ -1,11 +1,16 @@
 module Model
 
+type CardsVersion =
+    | I18N
+    | V2
+
 type Settings =
     { MinimumSips: int
       MaximumSips: int
       Remote: bool
       Audio: bool
-      Language: string }
+      Language: string
+      CardsVersion: CardsVersion }
 
 type RoundInformation =
     { CardsToPlay: int
@@ -46,8 +51,10 @@ type Msg =
     | AdvanceTurn
     | AdvanceRound
     | ChangeLanguage of string
+    | ChangeCardsVersion of CardsVersion
     | PlayAudio
     | RemoveActiveCard of Card.Type
     | RemoveCardFromSession of Card.Type
     | AddNoteToActiveCard of Card.Type * Player.Type option
     | ReassignCard of Card.Type
+    | NoopMsg

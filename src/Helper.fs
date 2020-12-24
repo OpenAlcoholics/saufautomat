@@ -3,6 +3,7 @@ module Helper
 open Fable.Core
 open Fable.React
 open Fable.React.Props
+open Model
 
 let unwrapMapOrDefault (opt: 'b option) (m: 'b -> 't) (def: 't) =
     if opt.IsSome then m opt.Value else def
@@ -57,3 +58,15 @@ let stop id =
 
 let isActiveCard (card: Card.Type option) =
     card.IsSome && (card.Value.Rounds <> 0 || card.Value.Uses <> 0)
+
+let stocv s =
+    if s = "i18n" then
+        Model.CardsVersion.I18N
+    else
+        Model.CardsVersion.V2
+
+let cvtos cv =
+    if cv = CardsVersion.I18N then
+        "i18n"
+    else
+        "v2"
