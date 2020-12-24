@@ -69,7 +69,7 @@ let rec findNextActivePlayer (playerList: Player.Type list) model =
             | None -> Some model.Players.Head
         | None -> Some model.Players.Head
 
-let int_replacement_regex = Regex("{int(:\s*[a-z]+.*?)?}")
+let int_replacement_regex = Regex("{int([^}]*)?}")
 
 let filterCardsForTurn cards model =
     let distinctCount = (getDistinctCount cards)
