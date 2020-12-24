@@ -1,10 +1,5 @@
 module App
 
-(**
- The famous Increment/Decrement ported from Elm.
- You can find more info about Elmish architecture and samples at https://elmish.github.io/
-*)
-
 open System
 open Card
 open Browser
@@ -73,8 +68,6 @@ let rec findNextActivePlayer (playerList: Player.Type list) model =
                 | true -> Some player
             | None -> Some model.Players.Head
         | None -> Some model.Players.Head
-
-// UPDATE
 
 let int_replacement_regex = Regex("{int(:\s*[a-z]+.*?)?}")
 
@@ -463,9 +456,6 @@ let update (msg: Msg) (model: Model) =
 
                 { model with ActiveCards = activeCards }, Cmd.Empty
             | None -> model, Cmd.Empty
-
-
-// VIEW (rendered with React)
 
 let settings model dispatch =
     div [ ClassName "modal fade"
@@ -878,7 +868,6 @@ let view (model: Model) dispatch =
         (settings model dispatch)
     ]
 
-// App
 Program.mkProgram init update view
 |> Program.withReactSynchronous "elmish-app"
 |> Program.withConsoleTrace
