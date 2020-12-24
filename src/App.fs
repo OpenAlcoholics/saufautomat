@@ -123,7 +123,7 @@ let getNextCard cards model =
         let min = model.Settings.MinimumSips
         let max = model.Settings.MaximumSips
 
-        let text = Regex.Replace(card.Text, (int_replacement_regex.ToString()), "{int}")
+        let text = Regex.Replace(card.Text, "{int[^}]*}", "{int}")
 
         let mutable unusable = List.Empty
 
