@@ -17,11 +17,14 @@ open Thoth.Fetch
 
 let getCards language dispatch =
     promise {
-        let url =
+        let i18nurl =
             sprintf
                 "https://raw.githubusercontent.com/OpenAlcoholics/drinking-game-cards/feature/i18n/minified_%s.json"
                 language
+        let v2url =
+            "https://raw.githubusercontent.com/OpenAlcoholics/drinking-game-cards/v2/minified.json"
 
+        let url = v2url
         let! res = Fetch.get (url)
         AddCards res |> dispatch
     }

@@ -1,10 +1,5 @@
 module Resources
 
-let unwrapOr (opt: 'b option) (def: 'b): 'b =
-    match opt with
-    | Some value -> value
-    | None -> def
-
 let english =
     Map.empty.
         Add("CLICK_TO_START", "Click me").
@@ -68,6 +63,8 @@ let german =
         Add("ACTIVE_CARD_REASSIGN", "Zuweisen")
 
 let getKey language key =
-    unwrapOr (match language with
-                | "de" -> german.TryFind key
-                | _ -> english.TryFind key) "UNDEFINED"
+    Helper.unwrapOr
+        (match language with
+         | "de" -> german.TryFind key
+         | _ -> english.TryFind key)
+        "UNDEFINED"
