@@ -51,7 +51,7 @@ spec:
     spec:
       containers:
       - name: saufautomat-backend
-        image: openalcoholics/saufautomat:e2ecc6a7a93e634f096364bba63ac28b27959ab7
+        image: openalcoholics/saufautomat{{TAG}}
         imagePullPolicy: Always
         ports:
         - containerPort: 80
