@@ -73,3 +73,7 @@ let getValueFromHtmlInput id def =
         .value with
     | "" -> def
     | value -> value
+
+let getCheckedFromHtmlElement id =
+    ((Dom.window.document.getElementById id) :?> Browser.Types.HTMLInputElement)
+                .``checked``

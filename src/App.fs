@@ -373,9 +373,7 @@ let update (msg: Msg) (model: Model) =
             AddActiveCard({ card with Uses = 0 }, (Some player))
             |> dispatch)
     | ChangeRemoteSetting ->
-        let remote =
-            ((Dom.window.document.getElementById "remote") :?> Browser.Types.HTMLInputElement)
-                .``checked``
+        let remote = getCheckedFromHtmlElement "remote"
 
         JsCookie.set "remote" (sprintf "%b" remote)
         |> ignore
@@ -384,9 +382,7 @@ let update (msg: Msg) (model: Model) =
               Settings = { model.Settings with Remote = remote } },
         Cmd.Empty
     | ChangeAudioSetting ->
-        let audio =
-            ((Dom.window.document.getElementById "audio") :?> Browser.Types.HTMLInputElement)
-                .``checked``
+        let audio = getCheckedFromHtmlElement "audio"
 
         JsCookie.set "audio" (sprintf "%b" audio)
         |> ignore
