@@ -510,18 +510,33 @@ let update (msg: Msg) (model: Model) =
             | None -> model, Cmd.Empty
     | NoopMsg -> model, Cmd.Empty
     | SendReview ->
-            let id = getValueFromHtmlInput "card-review-id" ""
-            let text = getValueFromHtmlInput "card-review-text" ""
-            let count = getValueFromHtmlInput "card-review-count" ""
-            let uses = getValueFromHtmlInput "card-review-uses" ""
-            let rounds = getValueFromHtmlInput "card-review-rounds" ""
-            let personal = getValueFromHtmlInput "card-review-personal" ""
-            let remote = getValueFromHtmlInput "card-review-remote" ""
-            let unique = getValueFromHtmlInput "card-review-unique" ""
+        let id =
+            getValueFromHtmlInput "card-review-id" ""
 
-            // TODO: wait until the backend is ready
+        let text =
+            getValueFromHtmlInput "card-review-text" ""
 
-            model, Cmd.Empty
+        let count =
+            getValueFromHtmlInput "card-review-count" ""
+
+        let uses =
+            getValueFromHtmlInput "card-review-uses" ""
+
+        let rounds =
+            getValueFromHtmlInput "card-review-rounds" ""
+
+        let personal =
+            getValueFromHtmlInput "card-review-personal" ""
+
+        let remote =
+            getValueFromHtmlInput "card-review-remote" ""
+
+        let unique =
+            getValueFromHtmlInput "card-review-unique" ""
+
+        // TODO: wait until the backend is ready
+
+        model, Cmd.Empty
 
 let settings model dispatch =
     div [ ClassName "modal fade"
@@ -651,8 +666,8 @@ let review card model dispatch =
                             input [ Name "card-review-id"
                                     ClassName "m-1 w-100 col"
                                     Id "card-review-id"
-                                    Placeholder (sprintf "%d" card.Id)
-                                    Value (sprintf "%d" card.Id)
+                                    Placeholder(sprintf "%d" card.Id)
+                                    Value(sprintf "%d" card.Id)
                                     InputType "text"
                                     Pattern "-?\d+" ]
                         ]
@@ -715,7 +730,7 @@ let review card model dispatch =
                             select [ Name "card-review-personal"
                                      ClassName "m-1 w-100 col"
                                      Id "card-review-personal"
-                                     DefaultValue  (card.Personal.ToString()) ] [
+                                     DefaultValue(card.Personal.ToString()) ] [
                                 option [] [ str "true" ]
                                 option [] [ str "false" ]
                             ]
@@ -728,7 +743,7 @@ let review card model dispatch =
                             select [ Name "card-review-remote"
                                      ClassName "m-1 w-100 col"
                                      Id "card-review-remote"
-                                     DefaultValue (card.Remote.ToString()) ] [
+                                     DefaultValue(card.Remote.ToString()) ] [
                                 option [] [ str "true" ]
                                 option [] [ str "false" ]
                             ]
@@ -741,7 +756,7 @@ let review card model dispatch =
                             select [ Name "card-review-unique"
                                      ClassName "m-1 w-100 col"
                                      Id "card-review-unique"
-                                     DefaultValue (card.Unique.ToString()) ] [
+                                     DefaultValue(card.Unique.ToString()) ] [
                                 option [] [ str "true" ]
                                 option [] [ str "false" ]
                             ]
@@ -841,7 +856,7 @@ let displayCurrentCard model dispatch =
                      ClassName "card-body card-title btn btn-dark w-100"
                      Style [ Height "93%" ]
                      Id "current-card-body"
-                     Disabled (model.CurrentCard.IsNone && model.Counter > 0) ] [
+                     Disabled(model.CurrentCard.IsNone && model.Counter > 0) ] [
                 span [ ClassName "h3" ] [
                     str
                         (match model.CurrentCard with
