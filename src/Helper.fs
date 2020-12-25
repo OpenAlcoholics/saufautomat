@@ -1,12 +1,12 @@
 module Helper
 
+open Browser
 open Fable.Core
 open Fable.React
 open Fable.React.Props
 open Model
 
-let unwrapMapOrDefault (opt: 'b option) (m: 'b -> 't) (def: 't) =
-    if opt.IsSome then m opt.Value else def
+let unwrapMapOrDefault (opt: 'b option) (m: 'b -> 't) (def: 't) = if opt.IsSome then m opt.Value else def
 
 let unwrapOr (opt: 'b option) (def: 'b): 'b =
     match opt with
@@ -20,6 +20,7 @@ let findCookieValue (name: string): string option =
         | _ -> ("", "")
 
     let rawCookies: string = Browser.Dom.document.cookie
+
     rawCookies.Split ';'
     |> Array.map (fun (s: string) -> s.Trim().Split '=' |> kvArrToPair)
     |> Map.ofArray
@@ -38,35 +39,37 @@ type HtmlAttr =
 
 let joinHtmlElements (sep: ReactElement) (l: ReactElement list) =
     Seq.ofList l
-    |> Seq.fold (fun acc y ->
-        if Seq.isEmpty acc
-        then seq { y }
-        else Seq.append acc (Seq.ofList [ sep; y ])) Seq.empty
+    |> Seq.fold (fun acc y -> if Seq.isEmpty acc then seq { y } else Seq.append acc (Seq.ofList [ sep; y ])) Seq.empty
     |> List.ofSeq
 
 let play id =
-    ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).play()
+    ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement)
+        .play()
 
 [<Emit("$0[$1] = $2")>]
 let assignElement element key value = jsNative
 
-let assignCurrentTime element value = assignElement element "currentTime" value
+let assignCurrentTime element value =
+    assignElement element "currentTime" value
 
 let stop id =
-    ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement).pause()
+    ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement)
+        .pause()
+
     assignCurrentTime ((Browser.Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement) 0.0
 
 let isActiveCard (card: Card.Type option) =
-    card.IsSome && (card.Value.Rounds <> 0 || card.Value.Uses <> 0)
+    card.IsSome
+    && (card.Value.Rounds <> 0 || card.Value.Uses <> 0)
 
 let stocv s =
-    if s = "i18n" then
-        Model.CardsVersion.I18N
-    else
-        Model.CardsVersion.V2
+    if s = "i18n" then Model.CardsVersion.I18N else Model.CardsVersion.V2
 
 let cvtos cv =
-    if cv = CardsVersion.I18N then
-        "i18n"
-    else
-        "v2"
+    if cv = CardsVersion.I18N then "i18n" else "v2"
+
+let getValueFromHtmlInput id def =
+    match ((Dom.window.document.getElementById id) :?> Browser.Types.HTMLInputElement)
+        .value with
+    | "" -> def
+    | value -> value

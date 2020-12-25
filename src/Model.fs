@@ -58,3 +58,4 @@ type Msg =
     | AddNoteToActiveCard of Card.Type * Player.Type option
     | ReassignCard of Card.Type
     | NoopMsg
+    | SendReview
