@@ -43,6 +43,7 @@ let english =
         .Add("CARD_REVIEW_UNIQUE", "Unique")
         .Add("CARD_REVIEW_SAVE", "Save")
         .Add("CARD_REVIEW", "Review")
+        .Add("DUPLICATE_PLAYER_ERROR", "Names must be unique")
 
 let german =
     Map
@@ -86,6 +87,7 @@ let german =
         .Add("CARD_REVIEW_UNIQUE", "Einzigartig")
         .Add("CARD_REVIEW_SAVE", "Speichern")
         .Add("CARD_REVIEW", "Review")
+        .Add("DUPLICATE_PLAYER_ERROR", "Namen müssen einzigartig sein")
 
 let getKey language key =
     Helper.unwrapOr

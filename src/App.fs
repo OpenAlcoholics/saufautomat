@@ -789,6 +789,7 @@ let addPlayerFunction model dispatch =
         (match (addPlayer value model dispatch) with
          | true ->
              ((Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value <- ""
+             HidePlayerNameDuplicate |> dispatch
          | false -> DisplayPlayerNameDuplicate |> dispatch)
 
 let displayPlayer player model dispatch =
@@ -829,6 +830,11 @@ let sidebar (model: Model) dispatch =
                     Id "add-player-field"
                     OnKeyDown(fun x -> if x.keyCode = 13. then (addPlayerFunction model dispatch))
                     MaxLength 20. ]
+            (if model.DisplayPlayerNameDuplicateError then
+                div [ ClassName "alert alert-danger ml-1" ] [ str (getKey (model.Settings.Language) "DUPLICATE_PLAYER_ERROR") ]
+            else
+                span [ ] [ str "" ]
+            )
             button [ ClassName "btn btn-primary m-1 w-100"
                      OnClick(fun _ -> addPlayerFunction model dispatch) ] [
                 str (getKey (model.Settings.Language) "ADD_PLAYER")
