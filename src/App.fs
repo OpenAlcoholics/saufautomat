@@ -392,8 +392,7 @@ let update (msg: Msg) (model: Model) =
         Cmd.Empty
     | SaveSettings ->
         let min =
-            (match ((Dom.window.document.getElementById "minimum-sips") :?> Browser.Types.HTMLInputElement)
-                .value with
+            (match (getValueFromHtmlInput "minimum-sips" "") with
              | "" -> model.Settings.MinimumSips
              | value -> value |> int)
 
@@ -401,8 +400,7 @@ let update (msg: Msg) (model: Model) =
         |> ignore
 
         let max =
-            (match ((Dom.window.document.getElementById "maximum-sips") :?> Browser.Types.HTMLInputElement)
-                .value with
+            (match (getValueFromHtmlInput "maximum-sips" "") with
              | "" -> model.Settings.MaximumSips
              | value -> value |> int)
 
@@ -410,8 +408,7 @@ let update (msg: Msg) (model: Model) =
         |> ignore
 
         let language =
-            (match ((Dom.window.document.getElementById "language") :?> Browser.Types.HTMLInputElement)
-                .value with
+            (match (getValueFromHtmlInput "language" "") with
              | "" -> model.Settings.Language
              | value -> value)
 
@@ -423,8 +420,7 @@ let update (msg: Msg) (model: Model) =
         JsCookie.set "language" language |> ignore
 
         let cardsversion =
-            (match ((Dom.window.document.getElementById "cardsversion") :?> Browser.Types.HTMLInputElement)
-                .value with
+            (match (getValueFromHtmlInput "cardsversion" "") with
              | "" -> model.Settings.CardsVersion
              | value -> stocv value)
 
@@ -492,8 +488,7 @@ let update (msg: Msg) (model: Model) =
             |> Promise.start)
     | AddNoteToActiveCard (card, player) ->
         let note =
-            match (((document.getElementById (generateActiveCardId card player false false)) :?> Browser.Types.HTMLInputElement))
-                .value with
+            match (getValueFromHtmlInput (generateActiveCardId card player false false) "") with
             | "" -> None
             | value -> Some value
 
@@ -503,8 +498,7 @@ let update (msg: Msg) (model: Model) =
                       model.ActiveCards },
         Cmd.Empty
     | ReassignCard card ->
-        match ((document.getElementById "reassignplayeroption") :?> Browser.Types.HTMLInputElement)
-            .value with
+        match (getValueFromHtmlInput "reassignplayeroption" "") with
         | "" -> model, Cmd.Empty
         | name ->
             match List.tryFind (fun p -> p.Name = name) model.Players with
@@ -525,7 +519,7 @@ let update (msg: Msg) (model: Model) =
             let remote = getValueFromHtmlInput "card-review-remote" ""
             let unique = getValueFromHtmlInput "card-review-unique" ""
 
-	    // TODO: wait until the backend is ready
+            // TODO: wait until the backend is ready
 
             model, Cmd.Empty
 
@@ -774,8 +768,7 @@ let addPlayer name model dispatch =
         true
 
 let addPlayerFunction model dispatch =
-    match ((Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement)
-        .value with
+    match getValueFromHtmlInput "add-player-field" "" with
     | "" -> ()
     | value ->
         (match (addPlayer value model dispatch) with
