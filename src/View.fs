@@ -24,16 +24,18 @@ let modal (id: string) bodyContent footerContent =
     ]
 
 let modalButton (id: string) className disabled model resourceKey (extras: IHTMLProp list) =
-    let id = match (id.StartsWith "#") with
-             | true -> id
-             | false -> "#" + id
+    let id =
+        match (id.StartsWith "#") with
+        | true -> id
+        | false -> "#" + id
 
-    button ([ ClassName className
-              Disabled disabled
-              DataToggle "modal"
-              DataTarget id ] @ extras) [
-        str (getKey (model.Settings.Language) resourceKey)
-    ]
+    button
+        ([ ClassName className
+           Disabled disabled
+           DataToggle "modal"
+           DataTarget id ]
+         @ extras)
+        [ str (getKey (model.Settings.Language) resourceKey) ]
 
 let label hfor (model: Model) resourceKey =
     label [ HtmlFor hfor

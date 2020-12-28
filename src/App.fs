@@ -61,18 +61,41 @@ let settings model dispatch =
           ]
           div [ ClassName "row" ] [
               label "maximum-sips" model "SETTINGS_MAXIMUM_SIPS"
-              input "maximum-sips" "maximum-sips" "text" "" (sprintf "%d" (model.Settings.MaximumSips)) "\d{1,2}" None []
+              input
+                  "maximum-sips"
+                  "maximum-sips"
+                  "text"
+                  ""
+                  (sprintf "%d" (model.Settings.MaximumSips))
+                  "\d{1,2}"
+                  None
+                  []
           ]
           div [ ClassName "row" ] [
               label "remote" model "SETTINGS_REMOTE"
-              input "remote" "remote" "remote" "" "" "" None  [ OnClick(fun _ -> dispatch ChangeRemoteSetting)
-                                                                DefaultChecked(model.Settings.Remote) ]
+              input
+                  "remote"
+                  "remote"
+                  "remote"
+                  ""
+                  ""
+                  ""
+                  None
+                  [ OnClick(fun _ -> dispatch ChangeRemoteSetting)
+                    DefaultChecked(model.Settings.Remote) ]
           ]
           div [ ClassName "row" ] [
               label "audio" model "SETTINGS_AUDIO"
-              input "audio" "audio" "checkbox" "" "" "" None  [ OnClick(fun _ -> dispatch ChangeAudioSetting)
-                                                                DefaultChecked(model.Settings.Audio) ]
-
+              input
+                  "audio"
+                  "audio"
+                  "checkbox"
+                  ""
+                  ""
+                  ""
+                  None
+                  [ OnClick(fun _ -> dispatch ChangeAudioSetting)
+                    DefaultChecked(model.Settings.Audio) ]
           ]
           div [ ClassName "row" ] [
               label "language" model "SETTINGS_LANGUAGE"
@@ -126,15 +149,39 @@ let review card model dispatch =
           ]
           div [ ClassName "row" ] [
               label "card-review-count" model "CARD_REVIEW_COUNT"
-              input "card-review-count" "card-review-count" "text" (sprintf "%d" (card.Count)) (sprintf "%d" (card.Count)) "\d+" None []
+              input
+                  "card-review-count"
+                  "card-review-count"
+                  "text"
+                  (sprintf "%d" (card.Count))
+                  (sprintf "%d" (card.Count))
+                  "\d+"
+                  None
+                  []
           ]
           div [ ClassName "row" ] [
               label "card-review-uses" model "CARD_REVIEW_USES"
-              input "card-review-uses" "card-review-uses" "text" (sprintf "%d" (card.Uses)) (sprintf "%d" (card.Uses)) ".*" None []
+              input
+                  "card-review-uses"
+                  "card-review-uses"
+                  "text"
+                  (sprintf "%d" (card.Uses))
+                  (sprintf "%d" (card.Uses))
+                  ".*"
+                  None
+                  []
           ]
           div [ ClassName "row" ] [
               label "card-review-rounds" model "CARD_REVIEW_ROUNDS"
-              input "card-review-rounds" "card-review-rounds" "text" (sprintf "%d" (card.Rounds)) (sprintf "%d" (card.Rounds)) "\d+" None []
+              input
+                  "card-review-rounds"
+                  "card-review-rounds"
+                  "text"
+                  (sprintf "%d" (card.Rounds))
+                  (sprintf "%d" (card.Rounds))
+                  "\d+"
+                  None
+                  []
           ]
           div [ ClassName "row" ] [
               label "card-review-personal" model "CARD_REVIEW_PERSONAL"
@@ -235,8 +282,16 @@ let displayPlayer player model dispatch =
 let sidebar (model: Model) dispatch =
     div [ ClassName "col-lg-2 sidebar col h-100 d-none d-lg-block d-xl-block" ] [
         div [ ClassName "form-group" ] [
-            input "add-player-field" "add-player-field" "text" "" "" ".*" (Some "form-control m-1 w-100") [ OnKeyDown(fun x -> if x.keyCode = 13. then (addPlayerFunction model dispatch))
-                                                                                                            MaxLength 20. ]
+            input
+                "add-player-field"
+                "add-player-field"
+                "text"
+                ""
+                ""
+                ".*"
+                (Some "form-control m-1 w-100")
+                [ OnKeyDown(fun x -> if x.keyCode = 13. then (addPlayerFunction model dispatch))
+                  MaxLength 20. ]
             (if model.DisplayPlayerNameDuplicateError then
                 div [ ClassName "alert alert-danger ml-1" ] [
                     str (getKey (model.Settings.Language) "DUPLICATE_PLAYER_ERROR")
@@ -290,7 +345,13 @@ let displayCurrentCard model dispatch =
                                  |> dispatch) ] [
                     str (getKey (model.Settings.Language) "DELETE_CARD_FROM_SESSION")
                 ]
-                modalButton "card-review" "btn btn-secondary d-none d-md-block d-lg-block d-xl-block" model.CurrentCard.IsNone model "CARD_REVIEW" []
+                modalButton
+                    "card-review"
+                    "btn btn-secondary d-none d-md-block d-lg-block d-xl-block"
+                    model.CurrentCard.IsNone
+                    model
+                    "CARD_REVIEW"
+                    []
                 (if model.CurrentCard.IsSome
                     && model.CurrentCard.Value.Personal then
                     span [ ClassName "badge badge-secondary m-2"
@@ -336,7 +397,15 @@ let addNoteToActiveCardModal card player model dispatch =
                 div [ ClassName "modal-body" ] [
                     div [ ClassName "form-group container" ] [
                         div [ ClassName "row" ] [
-                            input "note" (generateActiveCardId card player false false) "text" "" (unwrapOr card.Note "Enter a note here...") "" None []
+                            input
+                                "note"
+                                (generateActiveCardId card player false false)
+                                "text"
+                                ""
+                                (unwrapOr card.Note "Enter a note here...")
+                                ""
+                                None
+                                []
                         ]
                     ]
                 ]
@@ -424,7 +493,13 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
             if player.IsSome && model.Players.Length > 1 then
                 playerListModal model dispatch card player
 
-                modalButton "playerlistmodal" "btn btn-secondary d-none d-md-block d-lg-block d-xl-block" (model.Players.Length > 1) model "ACTIVE_CARD_REASSIGN" [ Style [ Width "49%"; MarginTop "1%" ] ]
+                modalButton
+                    "playerlistmodal"
+                    "btn btn-secondary d-none d-md-block d-lg-block d-xl-block"
+                    (model.Players.Length > 1)
+                    model
+                    "ACTIVE_CARD_REASSIGN"
+                    [ Style [ Width "49%"; MarginTop "1%" ] ]
         ]
     ]
 

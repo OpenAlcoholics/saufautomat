@@ -7,7 +7,6 @@ open Fable.React
 open Helper
 open Model
 open Player
-open Browser
 
 let update (msg: Msg) (model: Model) =
     match msg with
@@ -168,7 +167,7 @@ let update (msg: Msg) (model: Model) =
                   (List.filter (fun (card, _) ->
                       (card.Rounds <> 0 && card.Uses = 0)
                       || card.Uses <> 0)
-                       (List.map (fun (card, player: Player.Type option) ->
+                       (List.map (fun (card, player: Type option) ->
                            { card with
                                  Rounds =
                                      if card.Rounds > 0 && card.Uses = 0 && player.IsNone
@@ -305,7 +304,7 @@ let update (msg: Msg) (model: Model) =
               Cards = List.filter (fun c -> card <> c) model.Cards },
         Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
     | ChangeLanguage language ->
-        ((Dom.window.document.getElementsByTagName "html").Item 0)
+        ((Browser.Dom.window.document.getElementsByTagName "html").Item 0)
             .setAttribute("lang", language)
 
         { model with
