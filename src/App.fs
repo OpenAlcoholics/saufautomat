@@ -8,13 +8,13 @@ open Elmish.React
 open Fable.Import
 open Fable.React
 open Fable.React.Props
-open Fable.SimpleHttp
 open Helper
 open Model
 open Player
 open Resources
 open System.Text.RegularExpressions
 open Thoth.Fetch
+open View
 
 let getCards language (version: CardsVersion) dispatch =
     promise {
@@ -139,10 +139,9 @@ let replaceCardText card model =
 let getNextCard cards model =
     let cards = filterCardsForTurn cards model
 
-    if cards.Length = 0 then
-        None
-    else
-        Some (cards.Item(Random().Next() % cards.Length))
+    if cards.Length = 0
+    then None
+    else Some(cards.Item(Random().Next() % cards.Length))
 
 let explodeCards cards =
     (List.map (fun card ->
@@ -542,254 +541,135 @@ let update (msg: Msg) (model: Model) =
         model, Cmd.Empty
 
 let settings model dispatch =
-    div [ ClassName "modal fade"
-          Id "settings"
-          TabIndex -1
-          Role "dialog" ] [
-        div [ ClassName "modal-dialog"
-              Role "document" ] [
-            div [ ClassName "modal-content" ] [
-                div [ ClassName "modal-body" ] [
-                    div [ ClassName "form-group container" ] [
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "minimum-sips"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "SETTINGS_MINIMUM_SIPS")
-                            ]
-                            input [ Name "minimum-sips"
-                                    ClassName "m-1 w-100 col"
-                                    Id "minimum-sips"
-                                    Placeholder(sprintf "%d" (model.Settings.MinimumSips))
-                                    MaxLength 2.
-                                    InputType "text"
-                                    Pattern "\d{1,2}" ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "maximum-sips"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "SETTINGS_MAXIMUM_SIPS")
-                            ]
-                            input [ Name "maximum-sips"
-                                    ClassName "m-1 w-100 col"
-                                    Id "maximum-sips"
-                                    Placeholder(sprintf "%d" (model.Settings.MaximumSips))
-                                    MaxLength 2.
-                                    InputType "text"
-                                    Pattern "\d{1,2}" ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "remote"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "SETTINGS_REMOTE")
-                            ]
-                            input [ Name "remote"
-                                    OnClick(fun _ -> dispatch ChangeRemoteSetting)
-                                    InputType "checkbox"
-                                    ClassName "m-1 w-100 col"
-                                    Id "remote"
-                                    DefaultChecked(model.Settings.Remote) ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "audio"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "SETTINGS_AUDIO")
-                            ]
-                            input [ Name "audio"
-                                    OnClick(fun _ -> dispatch ChangeAudioSetting)
-                                    InputType "checkbox"
-                                    ClassName "m-1 w-100 col"
-                                    Id "audio"
-                                    DefaultChecked(model.Settings.Audio) ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "language"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "SETTINGS_LANGUAGE")
-                            ]
-                            select
-                                [ Name "language"
-                                  ClassName "m-1 w-100 col"
-                                  Id "language"
-                                  Disabled(model.Settings.CardsVersion = CardsVersion.V2)
-                                  DefaultValue model.Settings.Language ]
-                                (if model.Settings.CardsVersion = CardsVersion.V2
-                                 then [ option [] [ str "de" ] ]
-                                 else (List.map (fun language -> option [] [ str language ]) allowedLanguages))
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "cardsversion"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "SETTINGS_CARDSVERSION")
-                            ]
-                            select [ Name "cardsversion"
-                                     ClassName "m-1 w-100 col"
-                                     Id "cardsversion"
-                                     DefaultValue model.Settings.Language ] [
-                                option [] [
-                                    str (getKey (model.Settings.Language) "SETTINGS_CARDSVERSION_OPTION_V2")
-                                ]
-                                option [] [
-                                    str (getKey (model.Settings.Language) "SETTINGS_CARDSVERSION_OPTION_I18N")
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-                div [ ClassName "modal-footer" ] [
-                    span [ Id "git-tag"
-                           ClassName "text-secondary {{TAG-CLASS}}" ] [
-                        str "{{TAG}}"
-                    ]
-                    button [ ClassName "btn btn-primary"
-                             DataDismiss "modal"
-                             OnClick(fun _ -> dispatch SaveSettings) ] [
-                        str (getKey (model.Settings.Language) "SETTINGS_SAVE")
-                    ]
-                ]
-            ]
-        ]
-    ]
+    let body =
+        [ div [ ClassName "row" ] [
+            label "minimum-sips" model "SETTINGS_MINIMUM_SIPS"
+            input "minium-sips" "minium-sips" "text" "" (sprintf "%d" (model.Settings.MinimumSips)) "\d{1,2}" None []
+          ]
+          div [ ClassName "row" ] [
+              label "maximum-sips" model "SETTINGS_MAXIMUM_SIPS"
+              input "maximum-sips" "maximum-sips" "text" "" (sprintf "%d" (model.Settings.MaximumSips)) "\d{1,2}" None []
+          ]
+          div [ ClassName "row" ] [
+              label "remote" model "SETTINGS_REMOTE"
+              input "remote" "remote" "remote" "" "" "" None  [ OnClick(fun _ -> dispatch ChangeRemoteSetting)
+                                                                DefaultChecked(model.Settings.Remote) ]
+          ]
+          div [ ClassName "row" ] [
+              label "audio" model "SETTINGS_AUDIO"
+              input "audio" "audio" "checkbox" "" "" "" None  [ OnClick(fun _ -> dispatch ChangeAudioSetting)
+                                                                DefaultChecked(model.Settings.Audio) ]
+
+          ]
+          div [ ClassName "row" ] [
+              label "language" model "SETTINGS_LANGUAGE"
+              select
+                  [ Name "language"
+                    ClassName "m-1 w-100 col"
+                    Id "language"
+                    Disabled(model.Settings.CardsVersion = CardsVersion.V2)
+                    DefaultValue model.Settings.Language ]
+                  (if model.Settings.CardsVersion = CardsVersion.V2
+                   then [ option [] [ str "de" ] ]
+                   else (List.map (fun language -> option [] [ str language ]) allowedLanguages))
+          ]
+          div [ ClassName "row" ] [
+              label "cardsversion" model "SETTINGS_CARDSVERSION"
+              select [ Name "cardsversion"
+                       ClassName "m-1 w-100 col"
+                       Id "cardsversion"
+                       DefaultValue model.Settings.Language ] [
+                  option [] [
+                      str (getKey (model.Settings.Language) "SETTINGS_CARDSVERSION_OPTION_V2")
+                  ]
+                  option [] [
+                      str (getKey (model.Settings.Language) "SETTINGS_CARDSVERSION_OPTION_I18N")
+                  ]
+              ]
+          ] ]
+
+    let footer =
+        [ span [ Id "git-tag"
+                 ClassName "text-secondary {{TAG-CLASS}}" ] [
+            str "{{TAG}}"
+          ]
+          button [ ClassName "btn btn-primary"
+                   DataDismiss "modal"
+                   OnClick(fun _ -> dispatch SaveSettings) ] [
+              str (getKey (model.Settings.Language) "SETTINGS_SAVE")
+          ] ]
+
+    modal "settings" body footer
 
 let review card model dispatch =
-    div [ ClassName "modal fade"
-          Id "card-review"
-          TabIndex -1
-          Role "dialog" ] [
-        div [ ClassName "modal-dialog"
-              Style [ MaxWidth "80%" ]
-              Role "document" ] [
-            div [ ClassName "modal-content" ] [
-                div [ ClassName "modal-body" ] [
-                    div [ ClassName "form-group container" ] [
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "card-review-id"
-                                    ClassName "col align-self-center" ] [
-                                str "ID"
-                            ]
-                            input [ Name "card-review-id"
-                                    ClassName "m-1 w-100 col"
-                                    Id "card-review-id"
-                                    Placeholder(sprintf "%d" card.Id)
-                                    Value(sprintf "%d" card.Id)
-                                    InputType "text"
-                                    Pattern "-?\d+" ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "card-review"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "CARD_REVIEW_TEXT")
-                            ]
-                            input [ Name "card-review-text"
-                                    ClassName "m-1 w-100 col"
-                                    Id "card-review-text"
-                                    Placeholder card.Text
-                                    InputType "text"
-                                    Value card.Text ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "card-review-count"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "CARD_REVIEW_COUNT")
-                            ]
-                            input [ Name "card-review-count"
-                                    ClassName "m-1 w-100 col"
-                                    Id "card-review-count"
-                                    Placeholder(sprintf "%d" (card.Count))
-                                    Value(sprintf "%d" (card.Count))
-                                    InputType "text"
-                                    Pattern "\d+" ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "card-review-uses"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "CARD_REVIEW_USES")
-                            ]
-                            input [ Name "card-review-uses"
-                                    ClassName "m-1 w-100 col"
-                                    Id "card-review-uses"
-                                    Placeholder(sprintf "%d" (card.Uses))
-                                    Value(sprintf "%d" (card.Uses))
-                                    MaxLength 2.
-                                    InputType "text"
-                                    Pattern "\d+" ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "card-review-rounds"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "CARD_REVIEW_ROUNDS")
-                            ]
-                            input [ Name "card-review-rounds"
-                                    ClassName "m-1 w-100 col"
-                                    Id "card-review-rounds"
-                                    Placeholder(sprintf "%d" (card.Rounds))
-                                    Value(sprintf "%d" (card.Rounds))
-                                    Pattern "\d+" ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "card-review-personal"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "CARD_REVIEW_PERSONAL")
-                            ]
-                            select [ Name "card-review-personal"
-                                     ClassName "m-1 w-100 col"
-                                     Id "card-review-personal"
-                                     DefaultValue(card.Personal.ToString()) ] [
-                                option [] [ str "true" ]
-                                option [] [ str "false" ]
-                            ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "card-review-remote"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "CARD_REVIEW_REMOTE")
-                            ]
-                            select [ Name "card-review-remote"
-                                     ClassName "m-1 w-100 col"
-                                     Id "card-review-remote"
-                                     DefaultValue(card.Remote.ToString()) ] [
-                                option [] [ str "true" ]
-                                option [] [ str "false" ]
-                            ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "card-review-unique"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "CARD_REVIEW_UNIQUE")
-                            ]
-                            select [ Name "card-review-unique"
-                                     ClassName "m-1 w-100 col"
-                                     Id "card-review-unique"
-                                     DefaultValue(card.Unique.ToString()) ] [
-                                option [] [ str "true" ]
-                                option [] [ str "false" ]
-                            ]
-                        ]
-                        hr []
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "card-review-note"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "CARD_REVIEW_NOTE")
-                            ]
-                            textarea [
-                                Name "card-review-note"
-                                ClassName "m-1 w-100 col"
-                                Id "card-review-note"
-                                InputType "textarea"
+    let body =
+        [ div [ ClassName "row" ] [
+            label "card-review-id" model "ID"
+            input "card-review-id" "card-review-id" "text" (sprintf "%d" card.Id) (sprintf "%d" card.Id) "-?\d+" None []
+          ]
+          div [ ClassName "row" ] [
+              label "card-review" model "CARD_REVIEW_TEXT"
+              input "card-review-text" "card-review-text" "text" card.Text "" "" None []
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-count" model "CARD_REVIEW_COUNT"
+              input "card-review-count" "card-review-count" "text" (sprintf "%d" (card.Count)) (sprintf "%d" (card.Count)) "\d+" None []
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-uses" model "CARD_REVIEW_USES"
+              input "card-review-uses" "card-review-uses" "text" (sprintf "%d" (card.Uses)) (sprintf "%d" (card.Uses)) "" None []
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-rounds" model "CARD_REVIEW_ROUNDS"
+              input "card-review-rounds" "card-review-rounds" "text" (sprintf "%d" (card.Rounds)) (sprintf "%d" (card.Rounds)) "\d+" None []
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-personal" model "CARD_REVIEW_PERSONAL"
+              select [ Name "card-review-personal"
+                       ClassName "m-1 w-100 col"
+                       Id "card-review-personal"
+                       DefaultValue(card.Personal.ToString()) ] [
+                  option [] [ str "true" ]
+                  option [] [ str "false" ]
+              ]
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-remote" model "CARD_REVIEW_REMOTE"
+              select [ Name "card-review-remote"
+                       ClassName "m-1 w-100 col"
+                       Id "card-review-remote"
+                       DefaultValue(card.Remote.ToString()) ] [
+                  option [] [ str "true" ]
+                  option [] [ str "false" ]
+              ]
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-unique" model "CARD_REVIEW_UNIQUE"
+              select [ Name "card-review-unique"
+                       ClassName "m-1 w-100 col"
+                       Id "card-review-unique"
+                       DefaultValue(card.Unique.ToString()) ] [
+                  option [] [ str "true" ]
+                  option [] [ str "false" ]
+              ]
+          ]
+          hr []
+          div [ ClassName "row" ] [
+              label "card-review-note" model "CARD_REVIEW_NOTE"
+              textarea [ Name "card-review-note"
+                         ClassName "m-1 w-100 col"
+                         Id "card-review-note"
+                         InputType "textarea" ] []
+          ] ]
 
-                            ] [  ]
-                        ]
-                    ]
-                ]
-                div [ ClassName "modal-footer" ] [
-                    button [ ClassName "btn btn-primary"
-                             DataDismiss "modal"
-                             OnClick(fun _ -> dispatch SendReview) ] [
-                        str (getKey (model.Settings.Language) "CARD_REVIEW_SAVE")
-                    ]
-                ]
-            ]
-        ]
-    ]
+    let footer =
+        [ button [ ClassName "btn btn-primary"
+                   DataDismiss "modal"
+                   OnClick(fun _ -> dispatch SendReview) ] [
+            str (getKey (model.Settings.Language) "CARD_REVIEW_SAVE")
+          ] ]
+
+    modal "card-review" body footer
 
 let addPlayer name model dispatch =
     match List.tryFind ((=) (create name)) model.Players with
@@ -842,16 +722,14 @@ let displayPlayer player model dispatch =
 let sidebar (model: Model) dispatch =
     div [ ClassName "col-lg-2 sidebar col h-100 d-none d-lg-block d-xl-block" ] [
         div [ ClassName "form-group" ] [
-            input [ Name "add-player-field"
-                    ClassName "form-control m-1 w-100"
-                    Id "add-player-field"
-                    OnKeyDown(fun x -> if x.keyCode = 13. then (addPlayerFunction model dispatch))
-                    MaxLength 20. ]
+            input "add-player-field" "add-player-field" "form-control m-1 w-100" "" "" "" None [ OnKeyDown(fun x -> if x.keyCode = 13. then (addPlayerFunction model dispatch))
+                                                                                                 MaxLength 20. ]
             (if model.DisplayPlayerNameDuplicateError then
-                div [ ClassName "alert alert-danger ml-1" ] [ str (getKey (model.Settings.Language) "DUPLICATE_PLAYER_ERROR") ]
-            else
-                span [ ] [ str "" ]
-            )
+                div [ ClassName "alert alert-danger ml-1" ] [
+                    str (getKey (model.Settings.Language) "DUPLICATE_PLAYER_ERROR")
+                ]
+             else
+                 span [] [ str "" ])
             button [ ClassName "btn btn-primary m-1 w-100"
                      OnClick(fun _ -> addPlayerFunction model dispatch) ] [
                 str (getKey (model.Settings.Language) "ADD_PLAYER")
@@ -899,12 +777,7 @@ let displayCurrentCard model dispatch =
                                  |> dispatch) ] [
                     str (getKey (model.Settings.Language) "DELETE_CARD_FROM_SESSION")
                 ]
-                button [ ClassName "btn btn-secondary d-none d-md-block d-lg-block d-xl-block"
-                         Disabled model.CurrentCard.IsNone
-                         DataToggle "modal"
-                         DataTarget "#card-review" ] [
-                    str (getKey (model.Settings.Language) "CARD_REVIEW")
-                ]
+                modalButton "card-review" "btn btn-secondary d-none d-md-block d-lg-block d-xl-block" model.CurrentCard.IsNone model "CARD_REVIEW" []
                 (if model.CurrentCard.IsSome
                     && model.CurrentCard.Value.Personal then
                     span [ ClassName "badge badge-secondary m-2"
@@ -950,11 +823,7 @@ let addNoteToActiveCardModal card player model dispatch =
                 div [ ClassName "modal-body" ] [
                     div [ ClassName "form-group container" ] [
                         div [ ClassName "row" ] [
-                            input [ Name "note"
-                                    ClassName "m-1 w-100 col"
-                                    Id(generateActiveCardId card player false false)
-                                    Placeholder(unwrapOr card.Note "Enter a note here...")
-                                    InputType "text" ]
+                            input "note" (generateActiveCardId card player false false) "text" "" (unwrapOr card.Note "Enter a note here...") "" None []
                         ]
                     ]
                 ]
@@ -969,39 +838,30 @@ let addNoteToActiveCardModal card player model dispatch =
         ]
     ]
 
+let playerSelection players =
+    select
+        [ Name "player"
+          ClassName "m-1 w-100 col"
+          Id "reassignplayeroption" ]
+        (List.map (fun player -> option [] [ str player.Name ]) players)
+
 let playerListModal model dispatch card (player: Player.Type option) =
     let players =
         List.filter ((<>) player.Value) model.Players
 
-    div [ ClassName "modal fade"
-          Id "playerlistmodal"
-          TabIndex -1
-          Role "dialog" ] [
-        div [ ClassName "modal-dialog"
-              Role "document" ] [
-            div [ ClassName "modal-content" ] [
-                div [ ClassName "modal-body" ] [
-                    div [ ClassName "form-group container" ] [
-                        div [ ClassName "row" ] [
-                            select
-                                [ Name "player"
-                                  ClassName "m-1 w-100 col"
-                                  Id "reassignplayeroption" ]
-                                (List.map (fun player -> option [] [ str player.Name ]) players)
-                        ]
-                    ]
-                ]
+    let body =
+        [ div [ ClassName "row" ] [
+            playerSelection players
+          ] ]
 
-                div [ ClassName "modal-footer" ] [
-                    button [ ClassName "btn btn-primary"
-                             DataDismiss "modal"
-                             OnClick(fun _ -> ReassignCard card |> dispatch) ] [
-                        str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE")
-                    ]
-                ]
-            ]
-        ]
-    ]
+    let footer =
+        [ button [ ClassName "btn btn-primary"
+                   DataDismiss "modal"
+                   OnClick(fun _ -> ReassignCard card |> dispatch) ] [
+            str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE")
+          ] ]
+
+    modal "playerlistmodal" body footer
 
 let displayActiveCard (card, player: Player.Type option) model dispatch =
     div [ ClassName
@@ -1051,12 +911,7 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
             if player.IsSome && model.Players.Length > 1 then
                 playerListModal model dispatch card player
 
-                button [ ClassName "btn btn-primary"
-                         Style [ Width "49%"; MarginTop "1%" ]
-                         DataToggle "modal"
-                         DataTarget "#playerlistmodal" ] [
-                    str (getKey (model.Settings.Language) "ACTIVE_CARD_REASSIGN")
-                ]
+                modalButton "playerlistmodal" "btn btn-secondary d-none d-md-block d-lg-block d-xl-block" (model.Players.Length > 1) model "ACTIVE_CARD_REASSIGN" [ Style [ Width "49%"; MarginTop "1%" ] ]
         ]
     ]
 
@@ -1088,11 +943,7 @@ let view (model: Model) dispatch =
             span [ Id "cardToReassign" ] []
             div [ ClassName "col-sm-8 col-lg-2" ] [
                 div [ ClassName "" ] [
-                    button [ ClassName "btn btn-primary m-1"
-                             DataToggle "modal"
-                             DataTarget "#settings" ] [
-                        str (getKey (model.Settings.Language) "SETTINGS")
-                    ]
+                    modalButton "settings" "btn btn-primary m-1" false model "SETTINGS" []
                     button [ ClassName "btn btn-primary m-1"
                              OnClick(fun _ -> dispatch Reset) ] [
                         str (getKey (model.Settings.Language) "RESET")
