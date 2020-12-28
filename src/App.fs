@@ -112,37 +112,37 @@ let rec randomExclusive min max (unusable: int list) =
     then randomExclusive min max unusable
     else r
 
+let replaceCardText card model =
+    let min = model.Settings.MinimumSips
+    let max = model.Settings.MaximumSips
+
+    let text =
+        Regex.Replace(card.Text, "{int[^}]*}", "{int}")
+
+    let mutable unusable = List.Empty
+
+    let replacement_text =
+        (Seq.map (fun (w: string) ->
+            // This is temporary until the parser and variable replacement is implemented
+            let m = int_replacement_regex.Match w
+
+            match m.Success with
+            | true ->
+                let r = randomExclusive min max unusable
+                unusable <- r :: unusable
+                (sprintf "%d" r)
+            | false -> w) (text.Split ' '))
+        |> String.concat " "
+
+    { card with Text = replacement_text }
+
 let getNextCard cards model =
     let cards = filterCardsForTurn cards model
 
     if cards.Length = 0 then
         None
     else
-        let card =
-            cards.Item(Random().Next() % cards.Length)
-
-        let min = model.Settings.MinimumSips
-        let max = model.Settings.MaximumSips
-
-        let text =
-            Regex.Replace(card.Text, "{int[^}]*}", "{int}")
-
-        let mutable unusable = List.Empty
-
-        let replacement_text =
-            (Seq.map (fun (w: string) ->
-                // This is temporary until the parser and variable replacement is implemented
-                let m = int_replacement_regex.Match w
-
-                match m.Success with
-                | true ->
-                    let r = randomExclusive min max unusable
-                    unusable <- r :: unusable
-                    (sprintf "%d" r)
-                | false -> w) (text.Split ' '))
-            |> String.concat " "
-
-        Some { card with Text = replacement_text }
+        Some (cards.Item(Random().Next() % cards.Length))
 
 let explodeCards cards =
     (List.map (fun card ->
@@ -866,7 +866,7 @@ let displayCurrentCard model dispatch =
                 span [ ClassName "h3" ] [
                     str
                         (match model.CurrentCard with
-                         | Some (card) -> card.Text
+                         | Some (card) -> (replaceCardText card model).Text
                          | None ->
                              if model.Counter = 0
                              then (getKey (model.Settings.Language) "CLICK_TO_START")
