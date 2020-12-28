@@ -534,6 +534,9 @@ let update (msg: Msg) (model: Model) =
         let unique =
             getValueFromHtmlInput "card-review-unique" ""
 
+        let note =
+            getValueFromHtmlInput "card-review-note" ""
+
         // TODO: wait until the backend is ready
 
         model, Cmd.Empty
@@ -760,6 +763,20 @@ let review card model dispatch =
                                 option [] [ str "true" ]
                                 option [] [ str "false" ]
                             ]
+                        ]
+                        hr []
+                        div [ ClassName "row" ] [
+                            label [ HtmlFor "card-review-note"
+                                    ClassName "col align-self-center" ] [
+                                str (getKey (model.Settings.Language) "CARD_REVIEW_NOTE")
+                            ]
+                            textarea [
+                                Name "card-review-note"
+                                ClassName "m-1 w-100 col"
+                                Id "card-review-note"
+                                InputType "textarea"
+
+                            ] [  ]
                         ]
                     ]
                 ]
