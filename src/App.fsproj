@@ -8,7 +8,7 @@
       <Compile Include="Model.fs" />
       <Compile Include="Helper.fs" />
       <Compile Include="Resources.fs" />
-      <Compile Include="View.fs" />
+      <Compile Include="ViewHelper.fs" />
       <Compile Include="Update.fs" />
       <Compile Include="App.fs" />
   </ItemGroup>
