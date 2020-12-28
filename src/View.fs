@@ -44,14 +44,14 @@ let label hfor (model: Model) resourceKey =
 let input name id inputtype value placeholder pattern (className: string option) (extras: IHTMLProp list) =
     let args: IHTMLProp list =
         [ Name name
+          Id id
           ClassName
               (match className with
                | Some value -> value
                | None -> "m-1 w-100 col")
-          Id id
-          Placeholder placeholder
-          Value value
           InputType inputtype
+          Placeholder placeholder
+          DefaultValue value
           Pattern pattern ]
         @ extras
 
