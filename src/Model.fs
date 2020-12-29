@@ -63,3 +63,4 @@ type Msg =
     | ReassignCard of Card.Type
     | NoopMsg
     | SendReview
+    | ResetReview

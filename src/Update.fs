@@ -61,9 +61,10 @@ let update (msg: Msg) (model: Model) =
         model,
         (if card.IsSome then
             Cmd.ofSub (fun dispatch ->
-                (if (isActiveCard card) then
-                    AddActiveCard(card.Value, (if card.Value.Personal then model.CurrentPlayer else None))
-                    |> dispatch))
+                do (if (isActiveCard card) then
+                      AddActiveCard(card.Value, (if card.Value.Personal then model.CurrentPlayer else None))
+                      |> dispatch)
+                   dispatch ResetReview)
          else
              Cmd.Empty)
     | ChangeActivePlayer ->
@@ -396,5 +397,18 @@ let update (msg: Msg) (model: Model) =
         match result with
         | Ok _ -> ()
         | Error e -> window.alert (sprintf "Couldn't process review: %s" (e.ToString()))
+
+        model, Cmd.Empty
+    | ResetReview ->
+        if model.CurrentCard.IsSome && ((document.getElementById "card-review-id") <> null) then
+            assignValueToHtmlInput "card-review-id" (sprintf "%d" model.CurrentCard.Value.Id)
+            assignValueToHtmlInput "card-review-text" model.CurrentCard.Value.Text
+            assignValueToHtmlInput "card-review-count" (sprintf "%d" model.CurrentCard.Value.Count)
+            assignValueToHtmlInput "card-review-uses" (sprintf "%d" model.CurrentCard.Value.Uses)
+            assignValueToHtmlInput "card-review-rounds" (sprintf "%d" model.CurrentCard.Value.Rounds)
+            assignValueToHtmlInput "card-review-personal" (sprintf "%b" model.CurrentCard.Value.Personal)
+            assignValueToHtmlInput "card-review-remote" (sprintf "%b" model.CurrentCard.Value.Remote)
+            assignValueToHtmlInput "card-review-unique" (sprintf "%b" model.CurrentCard.Value.Unique)
+            assignValueToHtmlInput "card-review-note" (unwrapOr model.CurrentCard.Value.Note "")
 
         model, Cmd.Empty
