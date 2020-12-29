@@ -76,10 +76,11 @@ let cvtos cv =
     if cv = CardsVersion.I18N then "i18n" else "v2"
 
 let getValueFromHtmlInput id def =
-    match ((Dom.window.document.getElementById id) :?> Browser.Types.HTMLInputElement)
-        .value with
-    | "" -> def
-    | value -> value
+    match ((Dom.window.document.getElementById id) :?> Browser.Types.HTMLInputElement) with
+    | null -> def
+    | element -> match element.value with
+                 | "" -> def
+                 | value -> value
 
 let getCheckedFromHtmlElement id =
     ((Dom.window.document.getElementById id) :?> Browser.Types.HTMLInputElement)
