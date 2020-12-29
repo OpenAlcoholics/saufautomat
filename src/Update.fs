@@ -397,7 +397,7 @@ let update (msg: Msg) (model: Model) =
     | FinishReview result ->
         match result with
         | Ok _ -> ()
-        | Error e -> window.alert (sprintf "Couldn't process review: %s" (e.ToString()))
+        | Error e -> () // window.alert (sprintf "Couldn't process review: %s" (e.ToString())))
 
         model, Cmd.Empty
     | ResetReview ->
