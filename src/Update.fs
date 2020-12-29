@@ -48,8 +48,9 @@ let update (msg: Msg) (model: Model) =
             then List.filter (fun card -> not (List.exists (fun c -> c = card) playerCards)) model.Cards
             else model.Cards
 
-        let card = getNextCard cards model
-
+        let card = match getNextCard cards model with
+                   | Some card -> Some (replaceCardText card model)
+                   | None -> None
         let model =
             { model with
                   CurrentCard = card

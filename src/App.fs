@@ -290,7 +290,7 @@ let displayCurrentCard model dispatch =
                 span [ ClassName "h3" ] [
                     str
                         (match model.CurrentCard with
-                         | Some (card) -> (replaceCardText card model).Text
+                         | Some (card) -> card.ReplacedText
                          | None ->
                              if model.Counter = 0
                              then (getKey (model.Settings.Language) "CLICK_TO_START")
@@ -413,12 +413,12 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
                   else if player.IsNone then " border-warning"
                   else ""))
           Style [ Height "1%" ]
-          Title card.Text ] [
+          Title card.ReplacedText ] [
         (addNoteToActiveCardModal card player model dispatch)
         h5 [ ClassName "card-title h-50" ] [
             str
                 ((if player.IsSome then (sprintf "[%s] " player.Value.Name) else "")
-                 + card.Text
+                 + card.ReplacedText
                  + (if card.Rounds > 0 && card.Uses = 0 then (sprintf " (%d)" card.Rounds) else ""))
         ]
         div [ ClassName "card-body text-center mb-2" ] [

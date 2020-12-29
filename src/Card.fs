@@ -21,7 +21,8 @@ type Type =
       Remote: bool
       Unique: bool
       Note: string option
-      StartingRound: int option }
+      StartingRound: int option
+      ReplacedText: string }
     override this.Equals(other) =
         match other with
         | :? Type as other -> this.Id = other.Id
@@ -39,7 +40,8 @@ let Into raw =
       Remote = raw.remote
       Unique = raw.unique
       Note = None
-      StartingRound = None }
+      StartingRound = None
+      ReplacedText = raw.text }
 
 let decreaseCount card cards =
     match card with
