@@ -144,7 +144,7 @@ let review card model dispatch =
             input "card-review-id" "card-review-id" "text" (sprintf "%d" card.Id) (sprintf "%d" card.Id) "-?\d+" None [ Disabled true ]
           ]
           div [ ClassName "row" ] [
-              label "card-review" model "CARD_REVIEW_TEXT"
+              label "card-review-text" model "CARD_REVIEW_TEXT"
               input "card-review-text" "card-review-text" "text" card.Text "" ".*" None []
           ]
           div [ ClassName "row" ] [
