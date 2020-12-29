@@ -33,6 +33,12 @@ spec:
         - backend:
             serviceName: sauf-backend-service
             servicePort: 60001
+    - host: review.saufautom.at
+      http:
+        paths:
+          - backend:
+              serviceName: card-review-service
+              servicePort: 60004
 ---
 apiVersion: apps/v1
 kind: Deployment
