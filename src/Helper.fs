@@ -89,6 +89,14 @@ let roundHasEnded model =
     model.RoundInformation.CardsToPlay <= 0
     && model.Players.Length > 0
 
+let removeNodeById id =
+    match (Dom.window.document.getElementById id) with
+            | null -> ()
+            | x -> x.remove()
+
+let assignValueToHtmlInput id value =
+    ((Dom.window.document.getElementById id) :?> Browser.Types.HTMLInputElement).value <- value
+
 let getCards language (version: CardsVersion) dispatch =
     promise {
         let url =

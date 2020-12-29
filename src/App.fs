@@ -245,7 +245,7 @@ let addPlayerFunction model dispatch =
     | value ->
         (match (addPlayer value model dispatch) with
          | true ->
-             ((Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value <- ""
+             assignValueToHtmlInput "add-player-field" ""
              HidePlayerNameDuplicate |> dispatch
          | false -> DisplayPlayerNameDuplicate |> dispatch)
 
