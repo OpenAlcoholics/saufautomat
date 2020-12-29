@@ -5,620 +5,192 @@ open Card
 open Browser
 open Elmish
 open Elmish.React
-open Fable.Import
 open Fable.React
 open Fable.React.Props
 open Helper
 open Model
 open Player
 open Resources
-open System.Text.RegularExpressions
-open Thoth.Fetch
-
-let getCards language (version: CardsVersion) dispatch =
-    promise {
-        let url =
-            match version with
-            | CardsVersion.I18N ->
-                (sprintf
-                    "https://raw.githubusercontent.com/OpenAlcoholics/drinking-game-cards/feature/i18n/minified_%s.json"
-                     language)
-            | CardsVersion.V2 -> "https://raw.githubusercontent.com/OpenAlcoholics/drinking-game-cards/v2/minified.json"
-
-        let! res = Fetch.get (url)
-        AddCards res |> dispatch
-    }
-
-let init (): Model * Cmd<Msg> =
-    { Players = List.empty
-      ActiveCards = List.empty
-      CurrentCard = None
-      Cards = List.empty
-      CurrentPlayer = None
-      Counter = 0
-      DisplayPlayerNameDuplicateError = false
-      InitialLoad = true
-      Settings =
-          { MinimumSips = int (unwrapOr (findCookieValue "minimum-sips") "2")
-            MaximumSips =
-                (unwrapOr (findCookieValue "maximum-sips") "10")
-                |> int
-            Remote = (unwrapOr (findCookieValue "remote") "true") = "true"
-            Audio = (unwrapOr (findCookieValue "audio") "true") = "true"
-            Language =
-                (unwrapOr (findCookieValue "language") (Seq.head ((unwrapOr navigator.language "en-US").Split '-')))
-            CardsVersion = stocv (unwrapOr (findCookieValue "cardsversion") "v2") }
-      Round = 0
-      RoundInformation =
-          { CardsToPlay = 0
-            InitialPlayerIndex = -1 } },
-    Cmd.Empty
-
-let rec findNextActivePlayer (playerList: Player.Type list) model =
-    if playerList.Length = 0 then
-        None
-    else if playerList.Length = 1 then
-        Some playerList.Head
-    else
-        match model.CurrentPlayer with
-        | Some player ->
-            match List.tryFindIndex ((=) player) playerList with
-            | Some index ->
-                let player =
-                    playerList.Item((index + 1) % playerList.Length)
-
-                match player.Active with
-                | false -> findNextActivePlayer (List.filter ((<>) player) playerList) model
-                | true -> Some player
-            | None -> Some model.Players.Head
-        | None -> Some model.Players.Head
-
-let int_replacement_regex = Regex("{int([^}]*)?}")
-
-let filterCardsForTurn cards model =
-    let distinctCount = (getDistinctCount cards)
-
-    let cards =
-        List.filter (fun card ->
-            card.Count > 0
-            && ((model.Settings.Remote && card.Remote)
-                || (not model.Settings.Remote))
-            && if model.Players.Length = 0 then (not card.Personal) && card.Rounds = 0 else true) cards
-
-    let cards =
-        List.filter (fun card ->
-            if card.Unique && not card.Personal then
-                (List.filter (fun (activeCard, _) -> card.Unique && (activeCard = card)) model.ActiveCards)
-                    .Length = 0
-            else
-                true) cards
-
-    List.filter (fun card ->
-        if distinctCount > 1 then
-            card.Id
-            <> (unwrapMapOrDefault model.CurrentCard (fun c -> c.Id) -1)
-        else
-            true) cards
-
-let rec randomExclusive min max (unusable: int list) =
-    let r =
-        (Random().Next()) % (max - min + 1) + min
-
-    let forceReturn =
-        (max - min + 1) <= (List.length unusable)
-
-    if List.exists ((=) r) unusable && not forceReturn
-    then randomExclusive min max unusable
-    else r
-
-let getNextCard cards model =
-    let cards = filterCardsForTurn cards model
-
-    if cards.Length = 0 then
-        None
-    else
-        let card =
-            cards.Item(Random().Next() % cards.Length)
-
-        let min = model.Settings.MinimumSips
-        let max = model.Settings.MaximumSips
-
-        let text = Regex.Replace(card.Text, "{int[^}]*}", "{int}")
-
-        let mutable unusable = List.Empty
-
-        let replacement_text =
-            (Seq.map (fun (w: string) ->
-                // This is temporary until the parser and variable replacement is implemented
-                let m = int_replacement_regex.Match w
-
-                match m.Success with
-                | true ->
-                    let r = randomExclusive min max unusable
-                    unusable <- r :: unusable
-                    (sprintf "%d" r)
-                | false -> w) (text.Split ' '))
-            |> String.concat " "
-
-        Some { card with Text = replacement_text }
-
-let explodeCards cards =
-    (List.map (fun card ->
-        ([ card ]
-         |> Seq.collect (fun c -> List.replicate c.Count { c with Count = 1 }))) cards)
-    |> Seq.reduce Seq.append
-    |> List.ofSeq
-
-let roundHasEnded model =
-    model.RoundInformation.CardsToPlay <= 0
-    && model.Players.Length > 0
-
-let getPlayerByIndex index (players: Player.Type list): Player.Type option =
-    try
-        Some(players.Item index)
-    with _ -> None
-
-let allowedLanguages = [ "de"; "en" ]
-
-let generateActiveCardId card player isModal isId =
-    sprintf
-        "%sactivecardnote%s%d%s"
-        (if isId then "#" else "")
-        (if isModal then "modal" else "")
-        card.Id
-        (unwrapMapOrDefault player (fun p -> p.GId) "")
-
-let update (msg: Msg) (model: Model) =
-    match msg with
-    | InitialLoad ->
-        { model with InitialLoad = false },
-        Cmd.ofSub (fun dispatch ->
-            getCards model.Settings.Language model.Settings.CardsVersion dispatch
-            |> Promise.start)
-    | AdvanceTurn ->
-        model,
-        Cmd.ofSub (fun dispatch ->
-            do dispatch PlayAudio
-               dispatch IncrementCounter
-               dispatch ChangeActivePlayer
-               dispatch ChangeActiveCard
-               dispatch DecrementPlayerRoundCards
-
-               if roundHasEnded model then
-                   dispatch AdvanceRound
-                   dispatch DecrementActiveRoundCards)
-    | PlayAudio ->
-        if model.Settings.Audio then
-            let audioId =
-                (if roundHasEnded model then "nextround-audio" else "nextcard-audio")
-
-            stop "nextcard-audio"
-            stop "nextround-audio"
-            play audioId
-
-        model, Cmd.Empty
-    | ChangeActiveCard ->
-        let playerCards =
-            filterActiveCards (model.CurrentPlayer.Value) (model.ActiveCards)
-
-        let cards =
-            if model.CurrentPlayer.IsSome
-            then List.filter (fun card -> not (List.exists (fun c -> c = card) playerCards)) model.Cards
-            else model.Cards
-
-        let card = getNextCard cards model
-
-        let model =
-            { model with
-                  CurrentCard = card
-                  Cards = decreaseCount card model.Cards
-                  RoundInformation =
-                      { model.RoundInformation with
-                            CardsToPlay = max (model.RoundInformation.CardsToPlay - 1) 0 } }
-
-        model,
-        (if card.IsSome then
-            Cmd.ofSub (fun dispatch ->
-                (if (isActiveCard card) then
-                    AddActiveCard(card.Value, (if card.Value.Personal then model.CurrentPlayer else None))
-                    |> dispatch))
-         else
-             Cmd.Empty)
-    | ChangeActivePlayer ->
-        let nextPlayer =
-            findNextActivePlayer
-                ((List.filter (fun p ->
-                    p.Active
-                    || (compareOption (model.CurrentPlayer) (Some p))) model.Players))
-                model
-
-        (if model.Counter <> 0 then
-            { model with
-                  CurrentPlayer = nextPlayer
-                  Players =
-                      List.map (fun player ->
-                          if (compareOption (Some player) nextPlayer) then
-                              { player with
-                                    CardsPlayed = player.CardsPlayed + 1 }
-                          else
-                              player) model.Players }
-         else
-             model),
-        Cmd.Empty
-    | IncrementCounter ->
-        { model with
-              Counter = model.Counter + 1 },
-        Cmd.Empty
-    | AddCards cards ->
-        { model with
-              Cards = explodeCards (List.map Into cards) },
-        Cmd.Empty
-    | AddPlayer player ->
-        { model with
-              Players = model.Players @ [ player ]
-              RoundInformation =
-                  { model.RoundInformation with
-                        CardsToPlay = model.RoundInformation.CardsToPlay + 1 } },
-        match model.CurrentPlayer with
-        | Some _ -> Cmd.Empty
-        | None -> Cmd.ofSub (fun dispatch -> dispatch ChangeActivePlayer)
-    | RemovePlayer player ->
-        let isCurrentPlayer = isCurrent player model.CurrentPlayer
-
-        let players =
-            (List.filter (fun p -> p <> player) model.Players)
-
-        let activeCards =
-            List.filter (fun (_, p) -> not (compareOption p (Some player))) model.ActiveCards
-
-        let playerIndex =
-            unwrapOr (getIndex (Some player) model.Players) 0
-
-        let currentPlayerIndex =
-            unwrapOr (getIndex model.CurrentPlayer model.Players) 0
-
-        let cardsToPlayModifier =
-            match (playerIndex > model.RoundInformation.InitialPlayerIndex
-                   && playerIndex < model.Players.Length
-                   && playerIndex < currentPlayerIndex)
-                  || (playerIndex < model.RoundInformation.InitialPlayerIndex
-                      && playerIndex < currentPlayerIndex) with
-            | true -> 0
-            | false -> -1
-
-        { model with
-              Players = players
-              ActiveCards = activeCards
-              RoundInformation =
-                  { model.RoundInformation with
-                        CardsToPlay =
-                            model.RoundInformation.CardsToPlay
-                            + cardsToPlayModifier } },
-        (if isCurrentPlayer
-         then Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
-         else Cmd.Empty)
-    | TogglePlayerActivity player ->
-        { model with
-              Players = (List.map (fun p -> if p = player then { p with Active = not p.Active } else p) model.Players) },
-        (if (isCurrent player model.CurrentPlayer)
-         then Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
-         else Cmd.Empty)
-    | DisplayPlayerNameDuplicate ->
-        { model with
-              DisplayPlayerNameDuplicateError = true },
-        Cmd.Empty
-    | HidePlayerNameDuplicate ->
-        { model with
-              DisplayPlayerNameDuplicateError = false },
-        Cmd.Empty
-    | AddActiveCard (card, player) ->
-        let player = if card.Personal then player else None
-
-        { model with
-              ActiveCards =
-                  ({ card with
-                         StartingRound = if card.Rounds > 0 then Some model.Round else None },
-                   player)
-                  :: model.ActiveCards },
-        Cmd.Empty
-    | DecrementActiveRoundCards ->
-        { model with
-              ActiveCards =
-                  (List.filter (fun (card, _) ->
-                      (card.Rounds <> 0 && card.Uses = 0)
-                      || card.Uses <> 0)
-                       (List.map (fun (card, player: Player.Type option) ->
-                           { card with
-                                 Rounds =
-                                     if card.Rounds > 0 && card.Uses = 0 && player.IsNone
-                                     then card.Rounds - 1
-                                     else card.Rounds },
-                           player) model.ActiveCards)) },
-        Cmd.Empty
-    | DecrementPlayerRoundCards ->
-        { model with
-              ActiveCards =
-                  List.filter (fun (c, _) -> (c.Rounds <> 0 || c.Uses > 0))
-                      (List.map (fun (card, player) ->
-                          (if compareOption model.CurrentPlayer player then
-                              { card with
-                                    Rounds =
-                                        if card.Rounds > 0 && card.Uses = 0 && player.IsSome
-                                        then card.Rounds - 1
-                                        else card.Rounds }
-                           else
-                               card),
-                          player) model.ActiveCards) },
-        Cmd.Empty
-    | UseActiveCard (card, player) ->
-        { model with
-              ActiveCards =
-                  List.filter (fun (c, p) ->
-                      (c.Rounds <> 0 || c.Uses > 0)
-                      && not
-                          (card.Uses = 1
-                           && card = c
-                           && (compareOption (Some player) p)))
-                      (List.map (fun (c, p) ->
-                          (if card = c && (compareOption (Some player) p) then
-                              { c with
-                                    Uses = c.Uses - 1
-                                    StartingRound = Some model.Round }
-                           else
-                               c),
-                          p) model.ActiveCards) },
-        Cmd.ofSub (fun dispatch ->
-            AddActiveCard({ card with Uses = 0 }, (Some player))
-            |> dispatch)
-    | ChangeRemoteSetting ->
-        let remote =
-            ((Dom.window.document.getElementById "remote") :?> Browser.Types.HTMLInputElement)
-                .``checked``
-
-        JsCookie.set "remote" (sprintf "%b" remote)
-        |> ignore
-
-        { model with
-              Settings = { model.Settings with Remote = remote } },
-        Cmd.Empty
-    | ChangeAudioSetting ->
-        let audio =
-            ((Dom.window.document.getElementById "audio") :?> Browser.Types.HTMLInputElement)
-                .``checked``
-
-        JsCookie.set "audio" (sprintf "%b" audio)
-        |> ignore
-
-        { model with
-              Settings = { model.Settings with Audio = audio } },
-        Cmd.Empty
-    | SaveSettings ->
-        let min =
-            (match ((Dom.window.document.getElementById "minimum-sips") :?> Browser.Types.HTMLInputElement)
-                .value with
-             | "" -> model.Settings.MinimumSips
-             | value -> value |> int)
-
-        JsCookie.set "minimum-sips" (sprintf "%d" min)
-        |> ignore
-
-        let max =
-            (match ((Dom.window.document.getElementById "maximum-sips") :?> Browser.Types.HTMLInputElement)
-                .value with
-             | "" -> model.Settings.MaximumSips
-             | value -> value |> int)
-
-        JsCookie.set "maximum-sips" (sprintf "%d" max)
-        |> ignore
-
-        let language =
-            (match ((Dom.window.document.getElementById "language") :?> Browser.Types.HTMLInputElement)
-                .value with
-             | "" -> model.Settings.Language
-             | value -> value)
-
-        let language =
-            if not (List.exists ((=) language) allowedLanguages)
-            then model.Settings.Language
-            else language
-
-        JsCookie.set "language" language |> ignore
-
-        let cardsversion =
-            (match ((Dom.window.document.getElementById "cardsversion") :?> Browser.Types.HTMLInputElement)
-                .value with
-             | "" -> model.Settings.CardsVersion
-             | value -> stocv value)
-
-        JsCookie.set "cardsversion" (cvtos cardsversion)
-        |> ignore
-
-        { model with
-              Settings =
-                  { model.Settings with
-                        MinimumSips = min
-                        MaximumSips = max } },
-        Cmd.ofSub (fun dispatch ->
-            do (if (language <> model.Settings.Language && cardsversion <> CardsVersion.V2) then ChangeLanguage language else NoopMsg)
-               |> dispatch
-
-               (if cardsversion <> model.Settings.CardsVersion
-                then ChangeCardsVersion cardsversion
-                else NoopMsg)
-               |> dispatch)
-    | Reset -> init ()
-    | AdvanceRound ->
-        (if model.Players.Length > 0 then
-            { model with
-                  Round = model.Round + 1
-                  RoundInformation =
-                      { CardsToPlay = (getActive model.Players).Length - 1
-                        InitialPlayerIndex =
-                            (unwrapOr (getIndex model.CurrentPlayer model.Players) 1)
-                            - 1 } }
-         else
-             model),
-        Cmd.Empty
-    | RemoveActiveCard card ->
-        { model with
-              ActiveCards = List.filter (fun (c, _) -> card <> c) model.ActiveCards },
-        Cmd.Empty
-    | RemoveCardFromSession card ->
-        { model with
-              Cards = List.filter (fun c -> card <> c) model.Cards },
-        Cmd.ofSub (fun dispatch -> dispatch AdvanceTurn)
-    | ChangeLanguage language ->
-        ((Dom.window.document.getElementsByTagName "html").Item 0)
-            .setAttribute("lang", language)
-
-        { model with
-              Settings =
-                  { model.Settings with
-                        Language = language }
-              ActiveCards = [] },
-        Cmd.ofSub (fun dispatch ->
-            getCards language model.Settings.CardsVersion dispatch
-            |> Promise.start)
-    | ChangeCardsVersion version ->
-        { model with
-              Settings =
-                  { model.Settings with
-                        CardsVersion = version }
-              ActiveCards = [] },
-        Cmd.ofSub (fun dispatch ->
-            getCards model.Settings.Language version dispatch
-            |> Promise.start)
-    | AddNoteToActiveCard (card, player) ->
-        let note =
-            match (((document.getElementById (generateActiveCardId card player false false)) :?> Browser.Types.HTMLInputElement))
-                .value with
-            | "" -> None
-            | value -> Some value
-
-        { model with
-              ActiveCards =
-                  List.map (fun (c, player) -> (if card = c then { card with Note = note } else c), player)
-                      model.ActiveCards },
-        Cmd.Empty
-    | ReassignCard card ->
-        match ((document.getElementById "reassignplayeroption") :?> Browser.Types.HTMLInputElement)
-            .value with
-        | "" -> model, Cmd.Empty
-        | name ->
-            match List.tryFind (fun p -> p.Name = name) model.Players with
-            | Some newPlayer ->
-                let activeCards =
-                    List.map (fun (c, player) -> c, (if card = c then Some newPlayer else player)) model.ActiveCards
-
-                { model with ActiveCards = activeCards }, Cmd.Empty
-            | None -> model, Cmd.Empty
-    | NoopMsg -> model, Cmd.Empty
+open Update
+open View
 
 let settings model dispatch =
-    div [ ClassName "modal fade"
-          Id "settings"
-          TabIndex -1
-          Role "dialog" ] [
-        div [ ClassName "modal-dialog"
-              Role "document" ] [
-            div [ ClassName "modal-content" ] [
-                div [ ClassName "modal-body" ] [
-                    div [ ClassName "form-group container" ] [
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "minimum-sips"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "SETTINGS_MINIMUM_SIPS")
-                            ]
-                            input [ Name "minimum-sips"
-                                    ClassName "m-1 w-100 col"
-                                    Id "minimum-sips"
-                                    Placeholder(sprintf "%d" (model.Settings.MinimumSips))
-                                    MaxLength 2.
-                                    InputType "text"
-                                    Pattern "\d{1,2}" ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "maximum-sips"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "SETTINGS_MAXIMUM_SIPS")
-                            ]
-                            input [ Name "maximum-sips"
-                                    ClassName "m-1 w-100 col"
-                                    Id "maximum-sips"
-                                    Placeholder(sprintf "%d" (model.Settings.MaximumSips))
-                                    MaxLength 2.
-                                    InputType "text"
-                                    Pattern "\d{1,2}" ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "remote"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "SETTINGS_REMOTE")
-                            ]
-                            input [ Name "remote"
-                                    OnClick(fun _ -> dispatch ChangeRemoteSetting)
-                                    InputType "checkbox"
-                                    ClassName "m-1 w-100 col"
-                                    Id "remote"
-                                    DefaultChecked(model.Settings.Remote) ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "audio"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "SETTINGS_AUDIO")
-                            ]
-                            input [ Name "audio"
-                                    OnClick(fun _ -> dispatch ChangeAudioSetting)
-                                    InputType "checkbox"
-                                    ClassName "m-1 w-100 col"
-                                    Id "audio"
-                                    DefaultChecked(model.Settings.Audio) ]
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "language"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "SETTINGS_LANGUAGE")
-                            ]
-                            select
-                                [ Name "language"
-                                  ClassName "m-1 w-100 col"
-                                  Id "language"
-                                  Disabled (model.Settings.CardsVersion = CardsVersion.V2)
-                                  DefaultValue model.Settings.Language ]
-                                (if model.Settings.CardsVersion = CardsVersion.V2 then
-                                    [ option [] [ str "de" ] ]
-                                else
-                                    (List.map (fun language -> option [] [ str language ]) allowedLanguages))
-                        ]
-                        div [ ClassName "row" ] [
-                            label [ HtmlFor "cardsversion"
-                                    ClassName "col align-self-center" ] [
-                                str (getKey (model.Settings.Language) "SETTINGS_CARDSVERSION")
-                            ]
-                            select [ Name "cardsversion"
-                                     ClassName "m-1 w-100 col"
-                                     Id "cardsversion"
-                                     DefaultValue model.Settings.Language ] [
-                                option [] [ str (getKey (model.Settings.Language) "SETTINGS_CARDSVERSION_OPTION_V2") ]
-                                option [] [ str (getKey (model.Settings.Language) "SETTINGS_CARDSVERSION_OPTION_I18N") ]
-                            ]
-                        ]
-                    ]
-                ]
-                div [ ClassName "modal-footer" ] [
-                    span [ Id "git-tag"
-                           ClassName "text-secondary {{TAG-CLASS}}" ] [
-                        str "{{TAG}}"
-                    ]
-                    button [ ClassName "btn btn-primary"
-                             DataDismiss "modal"
-                             OnClick(fun _ -> dispatch SaveSettings) ] [
-                        str (getKey (model.Settings.Language) "SETTINGS_SAVE")
-                    ]
-                ]
-            ]
-        ]
-    ]
+    let body =
+        [ div [ ClassName "row" ] [
+            label "minimum-sips" model "SETTINGS_MINIMUM_SIPS"
+            input "minium-sips" "minium-sips" "text" "" (sprintf "%d" (model.Settings.MinimumSips)) "\d{1,2}" None []
+          ]
+          div [ ClassName "row" ] [
+              label "maximum-sips" model "SETTINGS_MAXIMUM_SIPS"
+              input
+                  "maximum-sips"
+                  "maximum-sips"
+                  "text"
+                  ""
+                  (sprintf "%d" (model.Settings.MaximumSips))
+                  "\d{1,2}"
+                  None
+                  []
+          ]
+          div [ ClassName "row" ] [
+              label "remote" model "SETTINGS_REMOTE"
+              input
+                  "remote"
+                  "remote"
+                  "checkbox"
+                  ""
+                  ""
+                  ""
+                  None
+                  [ OnClick(fun _ -> dispatch ChangeRemoteSetting)
+                    DefaultChecked(model.Settings.Remote) ]
+          ]
+          div [ ClassName "row" ] [
+              label "audio" model "SETTINGS_AUDIO"
+              input
+                  "audio"
+                  "audio"
+                  "checkbox"
+                  ""
+                  ""
+                  ""
+                  None
+                  [ OnClick(fun _ -> dispatch ChangeAudioSetting)
+                    DefaultChecked(model.Settings.Audio) ]
+          ]
+          div [ ClassName "row" ] [
+              label "language" model "SETTINGS_LANGUAGE"
+              select
+                  [ Name "language"
+                    ClassName "m-1 w-100 col"
+                    Id "language"
+                    Disabled(model.Settings.CardsVersion = CardsVersion.V2)
+                    DefaultValue model.Settings.Language ]
+                  (if model.Settings.CardsVersion = CardsVersion.V2
+                   then [ option [] [ str "de" ] ]
+                   else (List.map (fun language -> option [] [ str language ]) allowedLanguages))
+          ]
+          div [ ClassName "row" ] [
+              label "cardsversion" model "SETTINGS_CARDSVERSION"
+              select [ Name "cardsversion"
+                       ClassName "m-1 w-100 col"
+                       Id "cardsversion"
+                       DefaultValue model.Settings.Language ] [
+                  option [] [
+                      str (getKey (model.Settings.Language) "SETTINGS_CARDSVERSION_OPTION_V2")
+                  ]
+                  option [] [
+                      str (getKey (model.Settings.Language) "SETTINGS_CARDSVERSION_OPTION_I18N")
+                  ]
+              ]
+          ] ]
+
+    let footer =
+        [ span [ Id "git-tag"
+                 ClassName "text-secondary {{TAG-CLASS}}" ] [
+            str "{{TAG}}"
+          ]
+          button [ ClassName "btn btn-primary"
+                   DataDismiss "modal"
+                   OnClick(fun _ -> dispatch SaveSettings) ] [
+              str (getKey (model.Settings.Language) "SETTINGS_SAVE")
+          ] ]
+
+    modal "settings" body footer
+
+let review card model dispatch =
+    let body =
+        [ div [ ClassName "row" ] [
+            label "card-review-id" model "ID"
+            input "card-review-id" "card-review-id" "text" (sprintf "%d" card.Id) (sprintf "%d" card.Id) "-?\d+" None [ Disabled true ]
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-text" model "CARD_REVIEW_TEXT"
+              input "card-review-text" "card-review-text" "text" card.Text "" ".*" None []
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-count" model "CARD_REVIEW_COUNT"
+              input
+                  "card-review-count"
+                  "card-review-count"
+                  "text"
+                  (sprintf "%d" (card.Count))
+                  (sprintf "%d" (card.Count))
+                  "\d+"
+                  None
+                  []
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-uses" model "CARD_REVIEW_USES"
+              input
+                  "card-review-uses"
+                  "card-review-uses"
+                  "text"
+                  (sprintf "%d" (card.Uses))
+                  (sprintf "%d" (card.Uses))
+                  ".*"
+                  None
+                  []
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-rounds" model "CARD_REVIEW_ROUNDS"
+              input
+                  "card-review-rounds"
+                  "card-review-rounds"
+                  "text"
+                  (sprintf "%d" (card.Rounds))
+                  (sprintf "%d" (card.Rounds))
+                  "\d+"
+                  None
+                  []
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-personal" model "CARD_REVIEW_PERSONAL"
+              select [ Name "card-review-personal"
+                       ClassName "m-1 w-100 col"
+                       Id "card-review-personal"
+                       DefaultValue(card.Personal.ToString()) ] [
+                  option [] [ str "true" ]
+                  option [] [ str "false" ]
+              ]
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-remote" model "CARD_REVIEW_REMOTE"
+              select [ Name "card-review-remote"
+                       ClassName "m-1 w-100 col"
+                       Id "card-review-remote"
+                       DefaultValue(card.Remote.ToString()) ] [
+                  option [] [ str "true" ]
+                  option [] [ str "false" ]
+              ]
+          ]
+          div [ ClassName "row" ] [
+              label "card-review-unique" model "CARD_REVIEW_UNIQUE"
+              select [ Name "card-review-unique"
+                       ClassName "m-1 w-100 col"
+                       Id "card-review-unique"
+                       DefaultValue(card.Unique.ToString()) ] [
+                  option [] [ str "true" ]
+                  option [] [ str "false" ]
+              ]
+          ]
+          hr []
+          div [ ClassName "row" ] [
+              label "card-review-note" model "CARD_REVIEW_NOTE"
+              textarea [ Name "card-review-note"
+                         ClassName "m-1 w-100 col"
+                         Id "card-review-note"
+                         InputType "textarea" ] []
+          ] ]
+
+    let footer =
+        [ button [ ClassName "btn btn-primary"
+                   DataDismiss "modal"
+                   OnClick(fun _ -> dispatch SendReview) ] [
+            str (getKey (model.Settings.Language) "CARD_REVIEW_SAVE")
+          ] ]
+
+    modal "card-review" body footer
 
 let addPlayer name model dispatch =
     match List.tryFind ((=) (create name)) model.Players with
@@ -629,13 +201,13 @@ let addPlayer name model dispatch =
         true
 
 let addPlayerFunction model dispatch =
-    match ((Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement)
-        .value with
+    match getValueFromHtmlInput "add-player-field" "" with
     | "" -> ()
     | value ->
         (match (addPlayer value model dispatch) with
          | true ->
-             ((Dom.window.document.getElementById "add-player-field") :?> Browser.Types.HTMLInputElement).value <- ""
+             assignValueToHtmlInput "add-player-field" ""
+             HidePlayerNameDuplicate |> dispatch
          | false -> DisplayPlayerNameDuplicate |> dispatch)
 
 let displayPlayer player model dispatch =
@@ -671,11 +243,22 @@ let displayPlayer player model dispatch =
 let sidebar (model: Model) dispatch =
     div [ ClassName "col-lg-2 sidebar col h-100 d-none d-lg-block d-xl-block" ] [
         div [ ClassName "form-group" ] [
-            input [ Name "add-player-field"
-                    ClassName "form-control m-1 w-100"
-                    Id "add-player-field"
-                    OnKeyDown(fun x -> if x.keyCode = 13. then (addPlayerFunction model dispatch))
-                    MaxLength 20. ]
+            input
+                "add-player-field"
+                "add-player-field"
+                "text"
+                ""
+                ""
+                ".*"
+                (Some "form-control m-1 w-100")
+                [ OnKeyDown(fun x -> if x.keyCode = 13. then (addPlayerFunction model dispatch))
+                  MaxLength 20. ]
+            (if model.DisplayPlayerNameDuplicateError then
+                div [ ClassName "alert alert-danger ml-1" ] [
+                    str (getKey (model.Settings.Language) "DUPLICATE_PLAYER_ERROR")
+                ]
+             else
+                 span [] [ str "" ])
             button [ ClassName "btn btn-primary m-1 w-100"
                      OnClick(fun _ -> addPlayerFunction model dispatch) ] [
                 str (getKey (model.Settings.Language) "ADD_PLAYER")
@@ -695,6 +278,9 @@ let sidebar (model: Model) dispatch =
 let displayCurrentCard model dispatch =
     div [ ClassName "card d-flex col"
           Id "active-card" ] [
+        (match model.CurrentCard with
+         | Some (card) -> (review card model dispatch)
+         | None -> span [] [])
         div [ ClassName "card-body flex-wrap" ] [
             button [ OnClick(fun _ -> dispatch AdvanceTurn)
                      ClassName "card-body card-title btn btn-dark w-100"
@@ -704,7 +290,7 @@ let displayCurrentCard model dispatch =
                 span [ ClassName "h3" ] [
                     str
                         (match model.CurrentCard with
-                         | Some (card) -> card.Text
+                         | Some (card) -> card.ReplacedText
                          | None ->
                              if model.Counter = 0
                              then (getKey (model.Settings.Language) "CLICK_TO_START")
@@ -720,6 +306,13 @@ let displayCurrentCard model dispatch =
                                  |> dispatch) ] [
                     str (getKey (model.Settings.Language) "DELETE_CARD_FROM_SESSION")
                 ]
+                modalButton
+                    "card-review"
+                    "btn btn-secondary d-none d-md-block d-lg-block d-xl-block"
+                    model.CurrentCard.IsNone
+                    model
+                    "CARD_REVIEW"
+                    []
                 (if model.CurrentCard.IsSome
                     && model.CurrentCard.Value.Personal then
                     span [ ClassName "badge badge-secondary m-2"
@@ -765,11 +358,15 @@ let addNoteToActiveCardModal card player model dispatch =
                 div [ ClassName "modal-body" ] [
                     div [ ClassName "form-group container" ] [
                         div [ ClassName "row" ] [
-                            input [ Name "note"
-                                    ClassName "m-1 w-100 col"
-                                    Id(generateActiveCardId card player false false)
-                                    Placeholder(unwrapOr card.Note "Enter a note here...")
-                                    InputType "text" ]
+                            input
+                                "note"
+                                (generateActiveCardId card player false false)
+                                "text"
+                                ""
+                                (unwrapOr card.Note "Enter a note here...")
+                                ""
+                                None
+                                []
                         ]
                     ]
                 ]
@@ -784,39 +381,30 @@ let addNoteToActiveCardModal card player model dispatch =
         ]
     ]
 
+let playerSelection players =
+    select
+        [ Name "player"
+          ClassName "m-1 w-100 col"
+          Id "reassignplayeroption" ]
+        (List.map (fun player -> option [] [ str player.Name ]) players)
+
 let playerListModal model dispatch card (player: Player.Type option) =
     let players =
         List.filter ((<>) player.Value) model.Players
 
-    div [ ClassName "modal fade"
-          Id "playerlistmodal"
-          TabIndex -1
-          Role "dialog" ] [
-        div [ ClassName "modal-dialog"
-              Role "document" ] [
-            div [ ClassName "modal-content" ] [
-                div [ ClassName "modal-body" ] [
-                    div [ ClassName "form-group container" ] [
-                        div [ ClassName "row" ] [
-                            select
-                                [ Name "player"
-                                  ClassName "m-1 w-100 col"
-                                  Id "reassignplayeroption" ]
-                                (List.map (fun player -> option [] [ str player.Name ]) players)
-                        ]
-                    ]
-                ]
+    let body =
+        [ div [ ClassName "row" ] [
+            playerSelection players
+          ] ]
 
-                div [ ClassName "modal-footer" ] [
-                    button [ ClassName "btn btn-primary"
-                             DataDismiss "modal"
-                             OnClick(fun _ -> ReassignCard card |> dispatch) ] [
-                        str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE")
-                    ]
-                ]
-            ]
-        ]
-    ]
+    let footer =
+        [ button [ ClassName "btn btn-primary"
+                   DataDismiss "modal"
+                   OnClick(fun _ -> ReassignCard card |> dispatch) ] [
+            str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE")
+          ] ]
+
+    modal "playerlistmodal" body footer
 
 let displayActiveCard (card, player: Player.Type option) model dispatch =
     div [ ClassName
@@ -825,12 +413,12 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
                   else if player.IsNone then " border-warning"
                   else ""))
           Style [ Height "1%" ]
-          Title card.Text ] [
+          Title card.ReplacedText ] [
         (addNoteToActiveCardModal card player model dispatch)
         h5 [ ClassName "card-title h-50" ] [
             str
                 ((if player.IsSome then (sprintf "[%s] " player.Value.Name) else "")
-                 + card.Text
+                 + card.ReplacedText
                  + (if card.Rounds > 0 && card.Uses = 0 then (sprintf " (%d)" card.Rounds) else ""))
         ]
         div [ ClassName "card-body text-center mb-2" ] [
@@ -866,12 +454,13 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
             if player.IsSome && model.Players.Length > 1 then
                 playerListModal model dispatch card player
 
-                button [ ClassName "btn btn-primary"
-                         Style [ Width "49%"; MarginTop "1%" ]
-                         DataToggle "modal"
-                         DataTarget "#playerlistmodal" ] [
-                    str (getKey (model.Settings.Language) "ACTIVE_CARD_REASSIGN")
-                ]
+                modalButton
+                    "playerlistmodal"
+                    "btn btn-secondary d-none d-md-block d-lg-block d-xl-block"
+                    false
+                    model
+                    "ACTIVE_CARD_REASSIGN"
+                    [ Style [ Width "49%"; MarginTop "1%"; MarginLeft "25%" ] ]
         ]
     ]
 
@@ -903,11 +492,7 @@ let view (model: Model) dispatch =
             span [ Id "cardToReassign" ] []
             div [ ClassName "col-sm-8 col-lg-2" ] [
                 div [ ClassName "" ] [
-                    button [ ClassName "btn btn-primary m-1"
-                             DataToggle "modal"
-                             DataTarget "#settings" ] [
-                        str (getKey (model.Settings.Language) "SETTINGS")
-                    ]
+                    modalButton "settings" "btn btn-primary m-1" false model "SETTINGS" []
                     button [ ClassName "btn btn-primary m-1"
                              OnClick(fun _ -> dispatch Reset) ] [
                         str (getKey (model.Settings.Language) "RESET")

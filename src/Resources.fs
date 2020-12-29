@@ -34,6 +34,18 @@ let english =
         .Add("SETTINGS_CARDSVERSION", "Cards version")
         .Add("SETTINGS_CARDSVERSION_OPTION_V2", "v2 (de only)")
         .Add("SETTINGS_CARDSVERSION_OPTION_I18N", "i18n")
+        .Add("CARD_REVIEW_TEXT", "Text")
+        .Add("CARD_REVIEW_COUNT", "Count")
+        .Add("CARD_REVIEW_USES", "Uses")
+        .Add("CARD_REVIEW_ROUNDS", "Rounds")
+        .Add("CARD_REVIEW_PERSONAL", "Personal")
+        .Add("CARD_REVIEW_REMOTE", "Remote")
+        .Add("CARD_REVIEW_UNIQUE", "Unique")
+        .Add("CARD_REVIEW_SAVE", "Save")
+        .Add("CARD_REVIEW", "Review")
+        .Add("CARD_REVIEW_NOTE", "Note")
+        .Add("DUPLICATE_PLAYER_ERROR", "Names must be unique")
+        .Add("ID", "ID")
 
 let german =
     Map
@@ -68,6 +80,18 @@ let german =
         .Add("SETTINGS_CARDSVERSION", "Kartenversion")
         .Add("SETTINGS_CARDSVERSION_OPTION_V2", "v2 (nur de)")
         .Add("SETTINGS_CARDSVERSION_OPTION_I18N", "i18n")
+        .Add("CARD_REVIEW_TEXT", "Text")
+        .Add("CARD_REVIEW_COUNT", "Anzahl")
+        .Add("CARD_REVIEW_USES", "Nutzungen")
+        .Add("CARD_REVIEW_ROUNDS", "Runden")
+        .Add("CARD_REVIEW_PERSONAL", "Persönlich")
+        .Add("CARD_REVIEW_REMOTE", "Remote")
+        .Add("CARD_REVIEW_UNIQUE", "Einzigartig")
+        .Add("CARD_REVIEW_SAVE", "Speichern")
+        .Add("CARD_REVIEW", "Review")
+        .Add("CARD_REVIEW_NOTE", "Notiz")
+        .Add("DUPLICATE_PLAYER_ERROR", "Namen müssen einzigartig sein")
+        .Add("ID", "ID")
 
 let getKey language key =
     Helper.unwrapOr

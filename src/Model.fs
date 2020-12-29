@@ -1,5 +1,8 @@
 module Model
 
+open Thoth.Fetch
+open Thoth.Json
+
 type CardsVersion =
     | I18N
     | V2
@@ -36,6 +39,7 @@ type Msg =
     | IncrementCounter
     | AddActiveCard of Card.Type * Player.Type option
     | AddCards of Card.RawType list
+    | FinishReview of Result<JsonValue, FetchError>
     | AddPlayer of Player.Type
     | RemovePlayer of Player.Type
     | TogglePlayerActivity of Player.Type
@@ -58,3 +62,5 @@ type Msg =
     | AddNoteToActiveCard of Card.Type * Player.Type option
     | ReassignCard of Card.Type
     | NoopMsg
+    | SendReview
+    | ResetReview

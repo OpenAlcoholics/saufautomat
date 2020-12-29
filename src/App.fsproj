@@ -8,6 +8,8 @@
       <Compile Include="Model.fs" />
       <Compile Include="Helper.fs" />
       <Compile Include="Resources.fs" />
+      <Compile Include="ViewHelper.fs" />
+      <Compile Include="Update.fs" />
       <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
@@ -15,7 +17,8 @@
       <PackageReference Include="Fable.Elmish.React" Version="3.0.1" />
       <PackageReference Include="Fable.Browser.Navigator" Version="1.0.0" />
       <PackageReference Include="Fable.Import.Js-Cookie" Version="1.0.0" />
+      <PackageReference Include="Fable.SimpleHttp" Version="3.0.0" />
       <PackageReference Include="Thoth.Fetch" Version="2.0.0" />
-      <PackageReference Include="Thoth.Json" Version="4.1.0" />
+      <PackageReference Include="Thoth.Json" Version="5.0.0" />
   </ItemGroup>
 </Project>
