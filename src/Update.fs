@@ -1,12 +1,14 @@
 module Update
 
+open Browser
 open Card
 open Elmish
 open Fable.Import
-open Fable.React
+open Fable.SimpleHttp
 open Helper
 open Model
 open Player
+open Thoth.Json
 
 let update (msg: Msg) (model: Model) =
     match msg with
@@ -349,32 +351,50 @@ let update (msg: Msg) (model: Model) =
     | NoopMsg -> model, Cmd.Empty
     | SendReview ->
         let id =
-            getValueFromHtmlInput "card-review-id" ""
+            getValueFromHtmlInput "card-review-id" "" |> int
 
         let text =
             getValueFromHtmlInput "card-review-text" ""
 
         let count =
             getValueFromHtmlInput "card-review-count" ""
+            |> int
 
         let uses =
-            getValueFromHtmlInput "card-review-uses" ""
+            getValueFromHtmlInput "card-review-uses" "" |> int
 
         let rounds =
             getValueFromHtmlInput "card-review-rounds" ""
+            |> int
 
         let personal =
-            getValueFromHtmlInput "card-review-personal" ""
+            (getValueFromHtmlInput "card-review-personal" "") = "true"
 
         let remote =
-            getValueFromHtmlInput "card-review-remote" ""
+            (getValueFromHtmlInput "card-review-remote" "") = "true"
 
         let unique =
-            getValueFromHtmlInput "card-review-unique" ""
+            (getValueFromHtmlInput "card-review-unique" "") = "true"
 
         let note =
             getValueFromHtmlInput "card-review-note" ""
 
-        // TODO: wait until the backend is ready
+        let review =
+            Encode.object [ "id", Encode.int id
+                            "text", Encode.string text
+                            "count", Encode.int count
+                            "uses", Encode.int uses
+                            "rounds", Encode.int rounds
+                            "personal", Encode.bool personal
+                            "remote", Encode.bool remote
+                            "unique", Encode.bool unique
+                            "note", Encode.string note
+                            "branch", Encode.string "feature/i18n" ]
+
+        model, Cmd.ofSub (fun dispatch -> sendReview review dispatch |> Promise.start)
+    | FinishReview result ->
+        match result with
+        | Ok _ -> ()
+        | Error e -> window.alert (sprintf "Couldn't process review: %s" (e.ToString()))
 
         model, Cmd.Empty

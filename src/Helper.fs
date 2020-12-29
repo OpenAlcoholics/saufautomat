@@ -9,6 +9,7 @@ open Fable.React.Props
 open Model
 open System
 open Thoth.Fetch
+open Thoth.Json
 
 let unwrapMapOrDefault (opt: 'b option) (m: 'b -> 't) (def: 't) = if opt.IsSome then m opt.Value else def
 
@@ -206,3 +207,9 @@ let generateActiveCardId card (player: Player.Type option) isModal isId =
         (if isModal then "modal" else "")
         card.Id
         (unwrapMapOrDefault player (fun p -> p.GId) "")
+
+let sendReview (review: JsonValue) dispatch =
+    promise {
+        let! res = Fetch.post ("https://review.saufautom.at/add", review)
+        FinishReview res |> dispatch
+    }

@@ -1,5 +1,7 @@
 module Model
 
+open Thoth.Fetch
+
 type CardsVersion =
     | I18N
     | V2
@@ -36,6 +38,7 @@ type Msg =
     | IncrementCounter
     | AddActiveCard of Card.Type * Player.Type option
     | AddCards of Card.RawType list
+    | FinishReview of Result<string, FetchError>
     | AddPlayer of Player.Type
     | RemovePlayer of Player.Type
     | TogglePlayerActivity of Player.Type
