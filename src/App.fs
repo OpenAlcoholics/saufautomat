@@ -141,7 +141,7 @@ let review card model dispatch =
     let body =
         [ div [ ClassName "row" ] [
             label "card-review-id" model "ID"
-            input "card-review-id" "card-review-id" "text" (sprintf "%d" card.Id) (sprintf "%d" card.Id) "-?\d+" None []
+            input "card-review-id" "card-review-id" "text" (sprintf "%d" card.Id) (sprintf "%d" card.Id) "-?\d+" None [ Disabled true ]
           ]
           div [ ClassName "row" ] [
               label "card-review" model "CARD_REVIEW_TEXT"
