@@ -76,7 +76,7 @@ let settings model dispatch =
               input
                   "remote"
                   "remote"
-                  "remote"
+                  "checkbox"
                   ""
                   ""
                   ""
