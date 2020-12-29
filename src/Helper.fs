@@ -1,5 +1,6 @@
 module Helper
 
+open System.Text.RegularExpressions
 open Browser
 open Card
 open Elmish
@@ -222,3 +223,39 @@ let sendReview (review: JsonValue) dispatch =
         let! res = Fetch.post ("https://review.saufautom.at/add", review)
         FinishReview res |> dispatch
     }
+let rec randomExclusive min max (unusable: int list) =
+    let r =
+        (Random().Next()) % (max - min + 1) + min
+
+    let forceReturn =
+        (max - min + 1) <= (List.length unusable)
+
+    if List.exists ((=) r) unusable && not forceReturn
+    then randomExclusive min max unusable
+    else r
+
+let int_replacement_regex = Regex("{int([^}]*)?}")
+
+let replaceCardText card model =
+    let min = model.Settings.MinimumSips
+    let max = model.Settings.MaximumSips
+
+    let text =
+        Regex.Replace(card.Text, "{int[^}]*}", "{int}")
+
+    let mutable unusable = List.Empty
+
+    let replacement_text =
+        (Seq.map (fun (w: string) ->
+            // This is temporary until the parser and variable replacement is implemented
+            let m = int_replacement_regex.Match w
+
+            match m.Success with
+            | true ->
+                let r = randomExclusive min max unusable
+                unusable <- r :: unusable
+                (sprintf "%d" r)
+            | false -> w) (text.Split ' '))
+        |> String.concat " "
+
+    { card with ReplacedText = replacement_text }
