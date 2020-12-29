@@ -457,10 +457,10 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
                 modalButton
                     "playerlistmodal"
                     "btn btn-secondary d-none d-md-block d-lg-block d-xl-block"
-                    (model.Players.Length > 1)
+                    false
                     model
                     "ACTIVE_CARD_REASSIGN"
-                    [ Style [ Width "49%"; MarginTop "1%" ] ]
+                    [ Style [ Width "49%"; MarginTop "1%"; MarginLeft "25%" ] ]
         ]
     ]
 
