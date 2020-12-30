@@ -404,7 +404,7 @@ let update (msg: Msg) (model: Model) =
         if model.CurrentCard.IsSome && ((document.getElementById "card-review-id") <> null) then
             assignValueToHtmlInput "card-review-id" (sprintf "%d" model.CurrentCard.Value.Id)
             assignValueToHtmlInput "card-review-text" model.CurrentCard.Value.Text
-            assignValueToHtmlInput "card-review-count" (sprintf "%d" model.CurrentCard.Value.Count)
+            assignValueToHtmlInput "card-review-count" (sprintf "%d" model.CurrentCard.Value.OriginalCount)
             assignValueToHtmlInput "card-review-uses" (sprintf "%d" model.CurrentCard.Value.Uses)
             assignValueToHtmlInput "card-review-rounds" (sprintf "%d" model.CurrentCard.Value.Rounds)
             assignValueToHtmlInput "card-review-personal" (sprintf "%b" model.CurrentCard.Value.Personal)

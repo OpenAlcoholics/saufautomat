@@ -116,7 +116,7 @@ let getCards language (version: CardsVersion) dispatch =
 let explodeCards cards =
     (List.map (fun card ->
         ([ card ]
-         |> Seq.collect (fun c -> List.replicate c.Count { c with Count = 1 }))) cards)
+         |> Seq.collect (fun c -> List.replicate c.Count { c with Count = 1; OriginalCount = c.Count }))) cards)
     |> Seq.reduce Seq.append
     |> List.ofSeq
 
