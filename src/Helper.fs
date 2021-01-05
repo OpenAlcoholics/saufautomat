@@ -220,7 +220,8 @@ let generateActiveCardId card (player: Player.Type option) isModal isId =
 
 let sendReview (review: JsonValue) dispatch =
     promise {
-        let! res = Fetch.tryPost<_, _> ("https://review.saufautom.at/add", review)
+//        let! res = Fetch.tryPost<_, _> ("https://review.saufautom.at/add", review)
+        let! res = Fetch.tryPost<_, _> ("http://localhost:8000/add", review)
 
         FinishReview res |> dispatch
     }

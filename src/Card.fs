@@ -53,3 +53,17 @@ let decreaseCount card cards =
 let getDistinctCount cards =
     (List.map (fun c -> c.Id) cards |> List.distinct)
         .Length
+
+let Default =
+    { Id = -1
+      Text = ""
+      Count = 0
+      Uses = 0
+      Rounds = 0
+      Personal = false
+      Remote = false
+      Unique = true
+      Note = None
+      StartingRound = None
+      ReplacedText = ""
+      OriginalCount = 0 }

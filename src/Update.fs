@@ -25,6 +25,7 @@ let update (msg: Msg) (model: Model) =
                dispatch ChangeActivePlayer
                dispatch ChangeActiveCard
                dispatch DecrementPlayerRoundCards
+               dispatch ResetAddCustomActiveCard
 
                if roundHasEnded model then
                    dispatch AdvanceRound
@@ -413,3 +414,61 @@ let update (msg: Msg) (model: Model) =
             assignValueToHtmlInput "card-review-note" (unwrapOr model.CurrentCard.Value.Note "")
 
         model, Cmd.Empty
+    | ResetAddCustomActiveCard ->
+        if model.CurrentCard.IsSome && ((document.getElementById "add-active-card-id") <> null) then
+            assignValueToHtmlInput "add-active-card-id" (sprintf "%d" ((List.length model.Cards) + 1))
+            assignValueToHtmlInput "add-active-card-text" ""
+            assignValueToHtmlInput "add-active-card-count" (sprintf "%d" 0)
+            assignValueToHtmlInput "add-active-card-uses" (sprintf "%d" 0)
+            assignValueToHtmlInput "add-active-card-rounds" (sprintf "%d" 0)
+            assignValueToHtmlInput "add-active-card-personal" (sprintf "%b" true)
+            assignValueToHtmlInput "add-active-card-remote" (sprintf "%b" true)
+            assignValueToHtmlInput "add-active-card-unique" (sprintf "%b" false)
+            assignValueToHtmlInput "add-active-card-note" ""
+
+        model, Cmd.Empty
+    | AddCustomActiveCard player ->
+        let id =
+            getValueFromHtmlInput "add-active-card-id" "" |> int
+
+        let text =
+            getValueFromHtmlInput "add-active-card-text" ""
+
+        let count =
+            getValueFromHtmlInput "add-active-card-count" ""
+            |> int
+
+        let uses =
+            getValueFromHtmlInput "add-active-card-uses" "" |> int
+
+        let rounds =
+            getValueFromHtmlInput "add-active-card-rounds" ""
+            |> int
+
+        let personal =
+            (getValueFromHtmlInput "add-active-card-personal" "") = "true"
+
+        let remote =
+            (getValueFromHtmlInput "add-active-card-remote" "") = "true"
+
+        let unique =
+            (getValueFromHtmlInput "add-active-card-unique" "") = "true"
+
+        let note =
+            getValueFromHtmlInput "add-active-card-note" ""
+
+        let card = { Id = id
+                     Text = text
+                     Count = 1
+                     Uses = uses
+                     Rounds = rounds
+                     Personal = personal
+                     Remote = remote
+                     Unique = unique
+                     Note = Some note
+                     StartingRound = None
+                     ReplacedText = text
+                     OriginalCount = count }
+
+        model, Cmd.ofSub (fun dispatch -> do AddActiveCard (card, player) |> dispatch
+                                             ResetAddCustomActiveCard |> dispatch)

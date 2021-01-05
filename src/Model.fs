@@ -64,3 +64,5 @@ type Msg =
     | NoopMsg
     | SendReview
     | ResetReview
+    | AddCustomActiveCard of Player.Type option
+    | ResetAddCustomActiveCard

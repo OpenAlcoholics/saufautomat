@@ -98,91 +98,118 @@ let settings model dispatch =
 
     modal "settings" body footer
 
-let review card model dispatch =
-    let body =
-        [ div [ ClassName "row" ] [
-            label "card-review-id" model "ID"
-            input "card-review-id" "card-review-id" "text" (sprintf "%d" card.Id) (sprintf "%d" card.Id) "-?\d+" None [ Disabled true ]
+let cardModalBody card model =
+    let idPrefix =
+        if card.Id >= 0 then "card-review-" else "add-active-card-"
+
+    [ div [ ClassName "row" ] [
+        label (idPrefix + "id") model "ID"
+        input
+            (idPrefix + "id")
+            (idPrefix + "id")
+            "text"
+            (sprintf "%d" (if card.Id >= 0 then card.Id else (List.length model.Cards)))
+            (sprintf "%d" (if card.Id >= 0 then card.Id else (List.length model.Cards)))
+            "-?\d+"
+            None
+            [ Disabled(card.Id >= 0); Required true ]
+      ]
+      div [ ClassName "row" ] [
+          label (idPrefix + "text") model "CARD_REVIEW_TEXT"
+          input (idPrefix + "text") (idPrefix + "text") "text" card.Text "" ".*" None []
+      ]
+      div [ ClassName "row" ] [
+          label (idPrefix + "count") model "CARD_REVIEW_COUNT"
+          input
+              (idPrefix + "count")
+              (idPrefix + "count")
+              "text"
+              (sprintf "%d" (card.Count))
+              (sprintf "%d" (card.Count))
+              "\d+"
+              None
+              []
+      ]
+      div [ ClassName "row" ] [
+          label (idPrefix + "uses") model "CARD_REVIEW_USES"
+          input
+              (idPrefix + "uses")
+              (idPrefix + "uses")
+              "text"
+              (sprintf "%d" (card.Uses))
+              (sprintf "%d" (card.Uses))
+              ".*"
+              None
+              []
+      ]
+      div [ ClassName "row" ] [
+          label (idPrefix + "rounds") model "CARD_REVIEW_ROUNDS"
+          input
+              (idPrefix + "rounds")
+              (idPrefix + "rounds")
+              "text"
+              (sprintf "%d" (card.Rounds))
+              (sprintf "%d" (card.Rounds))
+              "\d+"
+              None
+              []
+      ]
+      div [ ClassName "row" ] [
+          label (idPrefix + "personal") model "CARD_REVIEW_PERSONAL"
+          select [ Name(idPrefix + "personal")
+                   ClassName "m-1 w-100 col"
+                   Id(idPrefix + "personal")
+                   DefaultValue(card.Personal.ToString()) ] [
+              option [] [ str "true" ]
+              option [] [ str "false" ]
           ]
-          div [ ClassName "row" ] [
-              label "card-review-text" model "CARD_REVIEW_TEXT"
-              input "card-review-text" "card-review-text" "text" card.Text "" ".*" None []
+      ]
+      div [ ClassName "row" ] [
+          label (idPrefix + "remote") model "CARD_REVIEW_REMOTE"
+          select [ Name(idPrefix + "remote")
+                   ClassName "m-1 w-100 col"
+                   Id(idPrefix + "remote")
+                   DefaultValue(card.Remote.ToString()) ] [
+              option [] [ str "true" ]
+              option [] [ str "false" ]
           ]
-          div [ ClassName "row" ] [
-              label "card-review-count" model "CARD_REVIEW_COUNT"
-              input
-                  "card-review-count"
-                  "card-review-count"
-                  "text"
-                  (sprintf "%d" (card.Count))
-                  (sprintf "%d" (card.Count))
-                  "\d+"
-                  None
-                  []
+      ]
+      div [ ClassName "row" ] [
+          label (idPrefix + "unique") model "CARD_REVIEW_UNIQUE"
+          select [ Name(idPrefix + "unique")
+                   ClassName "m-1 w-100 col"
+                   Id(idPrefix + "unique")
+                   DefaultValue(card.Unique.ToString()) ] [
+              option [] [ str "true" ]
+              option [] [ str "false" ]
           ]
-          div [ ClassName "row" ] [
-              label "card-review-uses" model "CARD_REVIEW_USES"
-              input
-                  "card-review-uses"
-                  "card-review-uses"
-                  "text"
-                  (sprintf "%d" (card.Uses))
-                  (sprintf "%d" (card.Uses))
-                  ".*"
-                  None
-                  []
+      ]
+      hr []
+      div [ ClassName "row" ] [
+          label (idPrefix + "note") model "CARD_REVIEW_NOTE"
+          textarea [ Name(idPrefix + "note")
+                     ClassName "m-1 w-100 col"
+                     Id(idPrefix + "note")
+                     InputType "textarea" ] []
+      ] ]
+
+let addActiveCard model dispatch =
+    let footer =
+        [ span [] [
+            str (getKey (model.Settings.Language) "ADD_ACTIVE_CARD_PERSONAL_NOTE")
           ]
-          div [ ClassName "row" ] [
-              label "card-review-rounds" model "CARD_REVIEW_ROUNDS"
-              input
-                  "card-review-rounds"
-                  "card-review-rounds"
-                  "text"
-                  (sprintf "%d" (card.Rounds))
-                  (sprintf "%d" (card.Rounds))
-                  "\d+"
-                  None
-                  []
-          ]
-          div [ ClassName "row" ] [
-              label "card-review-personal" model "CARD_REVIEW_PERSONAL"
-              select [ Name "card-review-personal"
-                       ClassName "m-1 w-100 col"
-                       Id "card-review-personal"
-                       DefaultValue(card.Personal.ToString()) ] [
-                  option [] [ str "true" ]
-                  option [] [ str "false" ]
-              ]
-          ]
-          div [ ClassName "row" ] [
-              label "card-review-remote" model "CARD_REVIEW_REMOTE"
-              select [ Name "card-review-remote"
-                       ClassName "m-1 w-100 col"
-                       Id "card-review-remote"
-                       DefaultValue(card.Remote.ToString()) ] [
-                  option [] [ str "true" ]
-                  option [] [ str "false" ]
-              ]
-          ]
-          div [ ClassName "row" ] [
-              label "card-review-unique" model "CARD_REVIEW_UNIQUE"
-              select [ Name "card-review-unique"
-                       ClassName "m-1 w-100 col"
-                       Id "card-review-unique"
-                       DefaultValue(card.Unique.ToString()) ] [
-                  option [] [ str "true" ]
-                  option [] [ str "false" ]
-              ]
-          ]
-          hr []
-          div [ ClassName "row" ] [
-              label "card-review-note" model "CARD_REVIEW_NOTE"
-              textarea [ Name "card-review-note"
-                         ClassName "m-1 w-100 col"
-                         Id "card-review-note"
-                         InputType "textarea" ] []
+          br []
+          button [ ClassName "btn btn-primary"
+                   DataDismiss "modal"
+                   OnClick(fun _ ->
+                       AddCustomActiveCard model.CurrentPlayer
+                       |> dispatch) ] [
+              str (getKey (model.Settings.Language) "ADD_ACTIVE_CARD_SAVE")
           ] ]
 
+    modal "add-active-card" (cardModalBody (Card.Default) model) footer
+
+let review card model dispatch =
     let footer =
         [ button [ ClassName "btn btn-primary"
                    DataDismiss "modal"
@@ -190,7 +217,7 @@ let review card model dispatch =
             str (getKey (model.Settings.Language) "CARD_REVIEW_SAVE")
           ] ]
 
-    modal "card-review" body footer
+    modal "card-review" (cardModalBody card model) footer
 
 let addPlayer name model dispatch =
     match List.tryFind ((=) (create name)) model.Players with
@@ -281,6 +308,7 @@ let displayCurrentCard model dispatch =
         (match model.CurrentCard with
          | Some (card) -> (review card model dispatch)
          | None -> span [] [])
+        (addActiveCard model dispatch)
         div [ ClassName "card-body flex-wrap" ] [
             button [ OnClick(fun _ -> dispatch AdvanceTurn)
                      ClassName "card-body card-title btn btn-dark w-100"
@@ -313,6 +341,14 @@ let displayCurrentCard model dispatch =
                     model
                     "CARD_REVIEW"
                     []
+                if model.Players.Length > 1 then
+                    modalButton
+                        "add-active-card"
+                        "btn btn-secondary d-none d-md-block d-lg-block d-xl-block ml-2"
+                        false
+                        model
+                        "ADD_ACTIVE_CARD"
+                        []
                 (if model.CurrentCard.IsSome
                     && model.CurrentCard.Value.Personal then
                     span [ ClassName "badge badge-secondary m-2"
@@ -460,7 +496,9 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
                     false
                     model
                     "ACTIVE_CARD_REASSIGN"
-                    [ Style [ Width "49%"; MarginTop "1%"; MarginLeft "25%" ] ]
+                    [ Style [ Width "49%"
+                              MarginTop "1%"
+                              MarginLeft "25%" ] ]
         ]
     ]
 

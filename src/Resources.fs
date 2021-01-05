@@ -46,6 +46,9 @@ let english =
         .Add("CARD_REVIEW_NOTE", "Note")
         .Add("DUPLICATE_PLAYER_ERROR", "Names must be unique")
         .Add("ID", "ID")
+        .Add("ADD_ACTIVE_CARD", "Add active")
+        .Add("ADD_ACTIVE_CARD_SAVE", "Save")
+        .Add("ADD_ACTIVE_CARD_PERSONAL_NOTE", "This is only reassignable if the personal option is set")
 
 let german =
     Map
@@ -92,6 +95,9 @@ let german =
         .Add("CARD_REVIEW_NOTE", "Notiz")
         .Add("DUPLICATE_PLAYER_ERROR", "Namen müssen einzigartig sein")
         .Add("ID", "ID")
+        .Add("ADD_ACTIVE_CARD", "Aktive hinzufügen")
+        .Add("ADD_ACTIVE_CARD_SAVE", "Speichern")
+        .Add("ADD_ACTIVE_CARD_PERSONAL_NOTE", "Nur zuweisbar wenn `persönlich` true ist.")
 
 let getKey language key =
     Helper.unwrapOr
