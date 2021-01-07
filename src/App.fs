@@ -251,8 +251,8 @@ let displayPlayer player model dispatch =
             h5 [ ClassName "card-title text-center" ] [
                 str (sprintf "%s (%d)" player.Name player.CardsPlayed)
             ]
-            div [ ClassName "d-flex justify-content-between" ] [
-                button [ ClassName "card btn btn-secondary toggle-button"
+            div [ ClassName "d-flex flex-column justify-content-between" ] [
+                button [ ClassName "card btn btn-secondary toggle-button mb-1"
                          OnClick(fun _ -> TogglePlayerActivity player |> dispatch) ] [
                     str
                         (if player.Active
