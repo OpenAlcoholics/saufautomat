@@ -392,7 +392,8 @@ let update (msg: Msg) (model: Model) =
                             "remote", Encode.bool remote
                             "unique", Encode.bool unique
                             "note", Encode.string note
-                            "branch", Encode.string "feature/i18n" ]
+                            "language", Encode.string model.Settings.Language
+                            "branch", Encode.string (cvtos model.Settings.CardsVersion) ]
 
         model, Cmd.ofSub (fun dispatch -> sendReview review dispatch |> Promise.start)
     | FinishReview result ->
