@@ -519,14 +519,17 @@ let view (model: Model) dispatch =
               then if model.InitialLoad then dispatch InitialLoad)
           ClassName "container-fluid h-100" ] [
         div [ ClassName "row m-4" ] [
-            figure [] [
-                audio [ Id "nextcard-audio"
-                        Src "/nextcard.mp3" ] []
-            ]
-            figure [] [
-                audio [ Id "nextround-audio"
-                        Src "/nextround.mp3" ] []
-            ]
+            (if model.Settings.Audio then
+                div [ ] [
+                    figure [] [
+                        audio [ Id "nextcard-audio"
+                                Src "/nextcard.mp3" ] []
+                    ]
+                    figure [] [
+                        audio [ Id "nextround-audio"
+                                Src "/nextround.mp3" ] [] ] ]
+                else span [] []
+            )
             span [ Id "cardToReassign" ] []
             div [ ClassName "col-sm-8 col-lg-2" ] [
                 div [ ClassName "" ] [
