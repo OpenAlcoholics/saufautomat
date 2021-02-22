@@ -417,11 +417,11 @@ let addNoteToActiveCardModal card player model dispatch =
         ]
     ]
 
-let playerSelection players =
+let playerSelection players id =
     select
         [ Name "player"
           ClassName "m-1 w-100 col"
-          Id "reassignplayeroption" ]
+          Id id ]
         (List.map (fun player -> option [] [ str player.Name ]) players)
 
 let playerListModal model dispatch card (player: Player.Type option) =
@@ -430,7 +430,7 @@ let playerListModal model dispatch card (player: Player.Type option) =
 
     let body =
         [ div [ ClassName "row" ] [
-            playerSelection players
+            playerSelection players (generateUniqueId "reassignplayeroption" [card.Id.ToString()] false true)
           ] ]
 
     let footer =
@@ -440,7 +440,7 @@ let playerListModal model dispatch card (player: Player.Type option) =
             str (getKey (model.Settings.Language) "ACTIVE_CARD_SAVE_NOTE")
           ] ]
 
-    modal "playerlistmodal" body footer
+    modal (generatePlayerReassignmentId card true false) body footer
 
 let displayActiveCard (card, player: Player.Type option) model dispatch =
     div [ ClassName
@@ -491,7 +491,7 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
                 playerListModal model dispatch card player
 
                 modalButton
-                    "playerlistmodal"
+                    (generatePlayerReassignmentId card true false)
                     "btn btn-secondary d-none d-md-block d-lg-block d-xl-block"
                     false
                     model

@@ -340,7 +340,7 @@ let update (msg: Msg) (model: Model) =
                       model.ActiveCards },
         Cmd.Empty
     | ReassignCard card ->
-        match (getValueFromHtmlInput "reassignplayeroption" "") with
+        match (getValueFromHtmlInput (generateUniqueId "reassignplayeroption" [card.Id.ToString()] false true) "") with
         | "" -> model, Cmd.Empty
         | name ->
             match List.tryFind (fun p -> p.Name = name) model.Players with

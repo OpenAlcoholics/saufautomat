@@ -216,7 +216,7 @@ let generateUniqueId basestring (values: String list) isModal isId =
         (if isId then "#" else "")
         basestring
         (if isModal then "modal" else "")
-        (values |> String.concat "")
+        (values |> List.map (fun s -> s.Replace("-", "")) |> String.concat "")
 
 let generateActiveCardId card (player: Player.Type option) isModal isId =
     generateUniqueId "activecardnote" [card.Id.ToString(); (unwrapMapOrDefault player (fun p -> p.GId) "")] isModal isId
@@ -226,8 +226,8 @@ let generatePlayerReassignmentId card isModal isId =
 
 let sendReview (review: JsonValue) dispatch =
     promise {
-//        let! res = Fetch.tryPost<_, _> ("https://review.saufautom.at/add", review)
-        let! res = Fetch.tryPost<_, _> ("http://localhost:8000/add", review)
+        let! res = Fetch.tryPost<_, _> ("https://review.saufautom.at/add", review)
+//        let! res = Fetch.tryPost<_, _> ("http://localhost:8000/add", review)
 
         FinishReview res |> dispatch
     }
