@@ -4,7 +4,6 @@ open Browser
 open Card
 open Elmish
 open Fable.Import
-open Fable.SimpleHttp
 open Helper
 open Model
 open Player
