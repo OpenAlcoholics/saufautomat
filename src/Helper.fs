@@ -210,13 +210,19 @@ let init (): Model * Cmd<Msg> =
             InitialPlayerIndex = -1 } },
     Cmd.Empty
 
-let generateActiveCardId card (player: Player.Type option) isModal isId =
+let generateUniqueId basestring (values: String list) isModal isId =
     sprintf
-        "%sactivecardnote%s%d%s"
+        "%s%s%s%s"
         (if isId then "#" else "")
+        basestring
         (if isModal then "modal" else "")
-        card.Id
-        (unwrapMapOrDefault player (fun p -> p.GId) "")
+        (values |> String.concat "")
+
+let generateActiveCardId card (player: Player.Type option) isModal isId =
+    generateUniqueId "activecardnote" [card.Id.ToString(); (unwrapMapOrDefault player (fun p -> p.GId) "")] isModal isId
+
+let generatePlayerReassignmentId card isModal isId =
+    generateUniqueId "cardplayerreassignment" [card.Id.ToString()] isModal isId
 
 let sendReview (review: JsonValue) dispatch =
     promise {
