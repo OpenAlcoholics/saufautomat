@@ -13,3 +13,6 @@ body {
 #contactlink:hover {
     color: #777 !important;
 }
+.card-title {
+    font-size: 1em;
+}

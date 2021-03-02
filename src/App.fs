@@ -504,7 +504,7 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
 
 let activeCards (model: Model) dispatch =
     div [ ClassName "active-cards row mt-3 d-none d-lg-block d-xl-block"
-          Style [ Height "22%"
+          Style [ Height "42%"
                   OverflowY "scroll"
                   MarginRight "1.67em" ] ] [
         div
@@ -560,7 +560,7 @@ let view (model: Model) dispatch =
             ]
         ]
         div [ ClassName "row m-2"
-              Style [ Height "65%" ] ] [
+              Style [ Height "45%" ] ] [
             (displayCurrentCard model dispatch)
             (sidebar model dispatch)
         ]
