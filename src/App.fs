@@ -560,7 +560,7 @@ let view (model: Model) dispatch =
             ]
         ]
         div [ ClassName "row m-2"
-              Style [ Height "45%" ] ] [
+              Style [ Height (if (List.length model.ActiveCards = 0) then "87%" else "45%") ] ] [
             (displayCurrentCard model dispatch)
             (sidebar model dispatch)
         ]
