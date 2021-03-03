@@ -505,7 +505,6 @@ let displayActiveCard (card, player: Player.Type option) model dispatch =
 let activeCards (model: Model) dispatch =
     div [ ClassName "active-cards row mt-3 d-none d-lg-block d-xl-block"
           Style [ Height "42%"
-                  OverflowY "scroll"
                   MarginRight "1.67em" ] ] [
         div
             [ ClassName "col d-flex flex-wrap" ]
