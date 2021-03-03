@@ -563,7 +563,7 @@ let view (model: Model) dispatch =
             (displayCurrentCard model dispatch)
             (sidebar model dispatch)
         ]
-        (activeCards model dispatch)
+        if (List.length model.ActiveCards > 0) then (activeCards model dispatch) else span [] []
         (settings model dispatch)
     ]
 
