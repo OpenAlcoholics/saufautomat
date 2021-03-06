@@ -34,9 +34,9 @@ let update (msg: Msg) (model: Model) =
             let audioId =
                 (if roundHasEnded model then "nextround-audio" else "nextcard-audio")
 
-            stop "nextcard-audio"
-            stop "nextround-audio"
-            play audioId
+            stopAudio "nextcard-audio"
+            stopAudio "nextround-audio"
+            playAudio audioId
 
         model, Cmd.Empty
     | ChangeActiveCard ->

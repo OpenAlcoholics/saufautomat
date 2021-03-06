@@ -50,7 +50,7 @@ let joinHtmlElements (sep: ReactElement) (l: ReactElement list) =
     |> Seq.fold (fun acc y -> if Seq.isEmpty acc then seq { y } else Seq.append acc (Seq.ofList [ sep; y ])) Seq.empty
     |> List.ofSeq
 
-let play id =
+let playAudio id =
     ((Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement)
         .play()
 
@@ -60,7 +60,7 @@ let assignElement element key value = jsNative
 let assignCurrentTime element value =
     assignElement element "currentTime" value
 
-let stop id =
+let stopAudio id =
     ((Dom.window.document.getElementById id) :?> Browser.Types.HTMLMediaElement)
         .pause()
 
@@ -79,9 +79,10 @@ let cvtos cv =
 let getValueFromHtmlInput id def =
     match ((Dom.window.document.getElementById id) :?> Browser.Types.HTMLInputElement) with
     | null -> def
-    | element -> match element.value with
-                 | "" -> def
-                 | value -> value
+    | element ->
+        match element.value with
+        | "" -> def
+        | value -> value
 
 let getCheckedFromHtmlElement id =
     ((Dom.window.document.getElementById id) :?> Browser.Types.HTMLInputElement)
@@ -93,8 +94,8 @@ let roundHasEnded model =
 
 let removeNodeById id =
     match (Dom.window.document.getElementById id) with
-            | null -> ()
-            | x -> x.remove()
+    | null -> ()
+    | x -> x.remove ()
 
 let assignValueToHtmlInput id value =
     ((Dom.window.document.getElementById id) :?> Browser.Types.HTMLInputElement).value <- value
@@ -115,8 +116,12 @@ let getCards language (version: CardsVersion) dispatch =
 
 let explodeCards cards =
     (List.map (fun card ->
-        ([ card ]
-         |> Seq.collect (fun c -> List.replicate c.Count { c with Count = 1; OriginalCount = c.Count }))) cards)
+        (List.replicate
+            card.Count
+             { card with
+                   Count = 1
+                   OriginalCount = card.Count })
+        |> Seq.ofList) cards)
     |> Seq.reduce Seq.append
     |> List.ofSeq
 
@@ -216,21 +221,29 @@ let generateUniqueId basestring (values: String list) isModal isId =
         (if isId then "#" else "")
         basestring
         (if isModal then "modal" else "")
-        (values |> List.map (fun s -> s.Replace("-", "")) |> String.concat "")
+        (values
+         |> List.map (fun s -> s.Replace("-", ""))
+         |> String.concat "")
 
 let generateActiveCardId card (player: Player.Type option) isModal isId =
-    generateUniqueId "activecardnote" [card.Id.ToString(); (unwrapMapOrDefault player (fun p -> p.GId) "")] isModal isId
+    generateUniqueId
+        "activecardnote"
+        [ card.Id.ToString()
+          (unwrapMapOrDefault player (fun p -> p.GId) "") ]
+        isModal
+        isId
 
 let generatePlayerReassignmentId card isModal isId =
-    generateUniqueId "cardplayerreassignment" [card.Id.ToString()] isModal isId
+    generateUniqueId "cardplayerreassignment" [ card.Id.ToString() ] isModal isId
 
 let sendReview (review: JsonValue) dispatch =
     promise {
         let! res = Fetch.tryPost<_, _> ("https://review.saufautom.at/add", review)
-//        let! res = Fetch.tryPost<_, _> ("http://localhost:8000/add", review)
+        //        let! res = Fetch.tryPost<_, _> ("http://localhost:8000/add", review)
 
         FinishReview res |> dispatch
     }
+
 let rec randomExclusive min max (unusable: int list) =
     let r =
         (Random().Next()) % (max - min + 1) + min
@@ -266,4 +279,5 @@ let replaceCardText card model =
             | false -> w) (text.Split ' '))
         |> String.concat " "
 
-    { card with ReplacedText = replacement_text }
+    { card with
+          ReplacedText = replacement_text }
