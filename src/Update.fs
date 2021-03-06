@@ -22,7 +22,7 @@ let update (msg: Msg) (model: Model) =
             do dispatch PlayAudio
                dispatch IncrementCounter
                dispatch ChangeActivePlayer
-               dispatch ChangeActiveCard
+               (if model.CurrentPlayer.IsSome then dispatch ChangeActiveCard)
                dispatch DecrementPlayerRoundCards
                dispatch ResetAddCustomActiveCard
 
@@ -44,13 +44,13 @@ let update (msg: Msg) (model: Model) =
             filterActiveCards (model.CurrentPlayer.Value) (model.ActiveCards)
 
         let cards =
-            if model.CurrentPlayer.IsSome
-            then List.filter (fun card -> not (List.exists (fun c -> c = card) playerCards)) model.Cards
-            else model.Cards
+            List.filter (fun card -> not (List.exists (fun c -> c = card) playerCards)) model.Cards
 
-        let card = match getNextCard cards model with
-                   | Some card -> Some (replaceCardText card model)
-                   | None -> None
+        let card =
+            match getNextCard cards model with
+            | Some card -> Some(replaceCardText card model)
+            | None -> None
+
         let model =
             { model with
                   CurrentCard = card
@@ -63,8 +63,9 @@ let update (msg: Msg) (model: Model) =
         (if card.IsSome then
             Cmd.ofSub (fun dispatch ->
                 do (if (isActiveCard card) then
-                      AddActiveCard(card.Value, (if card.Value.Personal then model.CurrentPlayer else None))
-                      |> dispatch)
+                        AddActiveCard(card.Value, (if card.Value.Personal then model.CurrentPlayer else None))
+                        |> dispatch)
+
                    dispatch ResetReview)
          else
              Cmd.Empty)
@@ -340,7 +341,7 @@ let update (msg: Msg) (model: Model) =
                       model.ActiveCards },
         Cmd.Empty
     | ReassignCard card ->
-        match (getValueFromHtmlInput (generateUniqueId "reassignplayeroption" [card.Id.ToString()] false true) "") with
+        match (getValueFromHtmlInput (generateUniqueId "reassignplayeroption" [ card.Id.ToString() ] false true) "") with
         | "" -> model, Cmd.Empty
         | name ->
             match List.tryFind (fun p -> p.Name = name) model.Players with
@@ -402,7 +403,8 @@ let update (msg: Msg) (model: Model) =
 
         model, Cmd.Empty
     | ResetReview ->
-        if model.CurrentCard.IsSome && ((document.getElementById "card-review-id") <> null) then
+        if model.CurrentCard.IsSome
+           && ((document.getElementById "card-review-id") <> null) then
             assignValueToHtmlInput "card-review-id" (sprintf "%d" model.CurrentCard.Value.Id)
             assignValueToHtmlInput "card-review-text" model.CurrentCard.Value.Text
             assignValueToHtmlInput "card-review-count" (sprintf "%d" model.CurrentCard.Value.OriginalCount)
@@ -415,7 +417,9 @@ let update (msg: Msg) (model: Model) =
 
         model, Cmd.Empty
     | ResetAddCustomActiveCard ->
-        if model.CurrentCard.IsSome && ((document.getElementById "add-active-card-id") <> null) then
+        if model.CurrentCard.IsSome
+           && ((document.getElementById "add-active-card-id")
+               <> null) then
             assignValueToHtmlInput "add-active-card-id" (sprintf "%d" ((List.length model.Cards) + 1))
             assignValueToHtmlInput "add-active-card-text" ""
             assignValueToHtmlInput "add-active-card-count" (sprintf "%d" 0)
@@ -429,7 +433,8 @@ let update (msg: Msg) (model: Model) =
         model, Cmd.Empty
     | AddCustomActiveCard player ->
         let id =
-            getValueFromHtmlInput "add-active-card-id" "" |> int
+            getValueFromHtmlInput "add-active-card-id" ""
+            |> int
 
         let text =
             getValueFromHtmlInput "add-active-card-text" ""
@@ -439,7 +444,8 @@ let update (msg: Msg) (model: Model) =
             |> int
 
         let uses =
-            getValueFromHtmlInput "add-active-card-uses" "" |> int
+            getValueFromHtmlInput "add-active-card-uses" ""
+            |> int
 
         let rounds =
             getValueFromHtmlInput "add-active-card-rounds" ""
@@ -457,21 +463,24 @@ let update (msg: Msg) (model: Model) =
         let note =
             getValueFromHtmlInput "add-active-card-note" ""
 
-        let card = { Id = id
-                     Text = text
-                     Count = 1
-                     Uses = uses
-                     Rounds = rounds
-                     Personal = personal
-                     Remote = remote
-                     Unique = unique
-                     Note = Some note
-                     StartingRound = None
-                     ReplacedText = text
-                     OriginalCount = count }
+        let card =
+            { Id = id
+              Text = text
+              Count = 1
+              Uses = uses
+              Rounds = rounds
+              Personal = personal
+              Remote = remote
+              Unique = unique
+              Note = Some note
+              StartingRound = None
+              ReplacedText = text
+              OriginalCount = count }
 
-        model, Cmd.ofSub (fun dispatch -> do AddActiveCard (card, player) |> dispatch
-                                             ResetAddCustomActiveCard |> dispatch)
+        model,
+        Cmd.ofSub (fun dispatch ->
+            do AddActiveCard(card, player) |> dispatch
+               ResetAddCustomActiveCard |> dispatch)
     | AddPlayedCard card ->
         let playedCards = List.take 30 (card :: model.PlayedCards)
-        { model with PlayedCards = playedCards}, Cmd.Empty
+        { model with PlayedCards = playedCards }, Cmd.Empty
