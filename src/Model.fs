@@ -30,7 +30,8 @@ type Model =
       InitialLoad: bool
       Settings: Settings
       Round: int
-      RoundInformation: RoundInformation }
+      RoundInformation: RoundInformation
+      PlayedCards: Card.Type list }
 
 type Msg =
     | InitialLoad
@@ -66,3 +67,4 @@ type Msg =
     | ResetReview
     | AddCustomActiveCard of Player.Type option
     | ResetAddCustomActiveCard
+    | AddPlayedCard of Card.Type

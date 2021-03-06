@@ -472,3 +472,6 @@ let update (msg: Msg) (model: Model) =
 
         model, Cmd.ofSub (fun dispatch -> do AddActiveCard (card, player) |> dispatch
                                              ResetAddCustomActiveCard |> dispatch)
+    | AddPlayedCard card ->
+        let playedCards = List.take 30 (card :: model.PlayedCards)
+        { model with PlayedCards = playedCards}, Cmd.Empty

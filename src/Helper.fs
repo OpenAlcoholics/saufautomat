@@ -157,12 +157,23 @@ let filterCardsForTurn cards model =
             else
                 true) cards
 
-    List.filter (fun card ->
+    let cards = List.filter (fun card ->
         if distinctCount > 1 then
             card.Id
             <> (unwrapMapOrDefault model.CurrentCard (fun c -> c.Id) -1)
         else
             true) cards
+
+    let nonDuplicateCards = List.filter (fun card ->
+                                List.contains
+                                    card.Id
+                                    (List.map (fun c -> c.Id) model.PlayedCards))
+                                cards
+
+    if List.length nonDuplicateCards > 0 then
+        nonDuplicateCards
+    else
+        cards
 
 let getNextCard (cards: Card.Type list) model =
     let cards = filterCardsForTurn cards model
@@ -212,7 +223,8 @@ let init (): Model * Cmd<Msg> =
       Round = 0
       RoundInformation =
           { CardsToPlay = 0
-            InitialPlayerIndex = -1 } },
+            InitialPlayerIndex = -1 }
+      PlayedCards = List.empty },
     Cmd.Empty
 
 let generateUniqueId basestring (values: String list) isModal isId =
